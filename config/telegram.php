@@ -1,5 +1,6 @@
 <?php
 
+use App\Telegram\Commands\StartCommand;
 use Telegram\Bot\Commands\HelpCommand;
 
 return [
@@ -59,6 +60,20 @@ return [
     |
     */
     'default' => 'mybot',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Allowed Chat IDs [Custom]
+    |--------------------------------------------------------------------------
+    |
+    | Only these chat IDs are allowed to interact with the bot. Any update
+    | from a chat ID not in this list is ignored by TelegramWebhookController.
+    |
+    */
+    'allowed_chat_ids' => array_filter([
+        env('TELEGRAM_CHAT_ID'),
+        env('TELEGRAM_CHAT_ID_2'),
+    ]),
 
     /*
     |--------------------------------------------------------------------------
@@ -130,6 +145,7 @@ return [
     |
     */
     'commands' => [
+        StartCommand::class,
         HelpCommand::class,
     ],
 
@@ -184,7 +200,7 @@ return [
             ],
         */
 
-        /* // Group Type: 4
+    /* // Group Type: 4
            'myBot' => [
                 'admin', // Command Group Name.
                 'subscription', // Command Group Name.
