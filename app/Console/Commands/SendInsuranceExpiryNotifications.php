@@ -52,12 +52,12 @@ class SendInsuranceExpiryNotifications extends Command
         $sections = [];
 
         if ($groups['overdue']->isNotEmpty()) {
-            $sections[] = "Overdue:\n".$this->formatList($groups['overdue']);
+            $sections[] = "ផុតកំណត់រួចហើយ:\n".$this->formatList($groups['overdue']);
         }
 
         foreach ($groups['buckets'] as $days => $policies) {
             if ($policies->isNotEmpty()) {
-                $sections[] = "Expiring in {$days} days:\n".$this->formatList($policies);
+                $sections[] = "ផុតកំណត់ក្នុងរយៈពេល {$days} ថ្ងៃ:\n".$this->formatList($policies);
             }
         }
 
@@ -71,7 +71,7 @@ class SendInsuranceExpiryNotifications extends Command
     {
         return $policies
             ->map(fn (Insurance $insurance): string => sprintf(
-                '- %s (%s), expiry %s',
+                '- %s (%s) ផុតកំណត់ %s',
                 $insurance->policy_no,
                 $insurance->insured_name,
                 $insurance->expiry_date->format('Y-m-d'),

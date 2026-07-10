@@ -44,7 +44,27 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * Builds a Telegram Mini App `initData` string, HMAC-signed the same way
+ * Telegram signs a real one, for exercising InitDataValidator/TelegramAuthController
+ * without touching the live bot.
+ *
+ * @param  array<string, mixed>  $userOverrides
+ */
+function buildTelegramInitData(int $userId, string $botToken, array $userOverrides = [], ?int $authDate = null): string
 {
-    // ..
+    $params = [
+        'auth_date' => (string) ($authDate ?? now()->timestamp),
+        'query_id' => 'AAFtestquery',
+        'user' => json_encode(array_merge(['id' => $userId, 'first_name' => 'Test'], $userOverrides)),
+    ];
+
+    ksort($params);
+
+    $checkString = collect($params)->map(fn ($value, $key) => "{$key}={$value}")->implode("\n");
+    $secretKey = hash_hmac('sha256', $botToken, 'WebAppData', true);
+
+    $params['hash'] = hash_hmac('sha256', $checkString, $secretKey);
+
+    return http_build_query($params);
 }

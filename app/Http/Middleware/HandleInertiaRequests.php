@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\InsuranceService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -40,6 +41,9 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'status' => fn () => $request->session()->get('status'),
             ],
+            'expiringCount' => fn () => $request->session()->has('telegram_chat_id')
+                ? app(InsuranceService::class)->expiringCount()
+                : 0,
         ];
     }
 }

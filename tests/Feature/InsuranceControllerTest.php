@@ -1,60 +1,63 @@
 <?php
 
 use App\Models\Insurance;
-use Illuminate\Support\Facades\URL;
-use Inertia\Testing\AssertableInertia as Assert;
 use Telegram\Bot\Api;
 use Telegram\Bot\Objects\Message;
 
 beforeEach(function () {
     $this->chatId = 111;
+    $this->botToken = 'test-bot-token';
 
-    config(['insurance-bot.allowed_chat_ids' => [$this->chatId]]);
+    config([
+        'telegram.default' => 'mybot',
+        'telegram.bots.mybot.token' => $this->botToken,
+        'insurance-bot.allowed_chat_ids' => [$this->chatId],
+    ]);
 
     $this->mock(Api::class, function ($mock) {
         $mock->shouldReceive('sendMessage')->andReturn(new Message([]));
     });
 });
 
-function signedIndexUrl(int $chatId): string
+function authenticate(int $chatId, string $botToken): void
 {
-    return URL::temporarySignedRoute('insurances.index', now()->addMinutes(10), ['chat' => $chatId]);
+    $initData = buildTelegramInitData($chatId, $botToken);
+
+    test()->post('/telegram/auth', ['init_data' => $initData])->assertRedirect('/insurances');
 }
 
-it('rejects a signed link for a chat id that is not allowed', function () {
-    $this->get(signedIndexUrl(999))->assertForbidden();
+it('redirects to the launch page when no session is established', function () {
+    $this->get('/insurances')->assertRedirect('/telegram/launch');
 });
 
-it('rejects an unsigned request with no established session', function () {
-    $this->get('/insurances')->assertForbidden();
+it('rejects auth for a chat id that is not allowed then keeps redirecting to launch', function () {
+    $initData = buildTelegramInitData(999, $this->botToken);
+
+    $this->post('/telegram/auth', ['init_data' => $initData])->assertForbidden();
+
+    $this->get('/insurances')->assertRedirect('/telegram/launch');
 });
 
-it('establishes a session from a valid signed link and renders the list', function () {
-    $this->get(signedIndexUrl($this->chatId))
-        ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->component('Insurances/Index'));
-
-    expect(session('telegram_chat_id'))->toBe($this->chatId);
-});
-
-it('allows subsequent unsigned navigation once the session is established', function () {
-    $this->get(signedIndexUrl($this->chatId))->assertOk();
+it('establishes a session via the initData handshake and renders the list', function () {
+    authenticate($this->chatId, $this->botToken);
 
     $this->get('/insurances')
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->component('Insurances/Index'));
+        ->assertInertia(fn ($page) => $page->component('Insurances/Index'));
+
+    expect(session('telegram_chat_id'))->toBe($this->chatId);
 });
 
 it('creates a policy and notifies the telegram chat', function () {
     $this->mock(Api::class, function ($mock) {
         $mock->shouldReceive('sendMessage')->once()
             ->withArgs(fn (array $params) => $params['chat_id'] === $this->chatId
-                && str_contains($params['text'], 'Saved policy')
+                && str_contains($params['text'], 'បានរក្សាទុកបណ្ណសន្យារ៉ាប់រង')
                 && str_contains($params['text'], 'Y25TEST00099'))
             ->andReturn(new Message([]));
     });
 
-    $this->get(signedIndexUrl($this->chatId))->assertOk();
+    authenticate($this->chatId, $this->botToken);
 
     $response = $this->post('/insurances', insuranceFormPayload());
 
@@ -63,7 +66,7 @@ it('creates a policy and notifies the telegram chat', function () {
 });
 
 it('rejects invalid input without creating a policy', function () {
-    $this->get(signedIndexUrl($this->chatId))->assertOk();
+    authenticate($this->chatId, $this->botToken);
 
     $response = $this->post('/insurances', insuranceFormPayload(['expiry_date' => 'not-a-date']));
 
@@ -74,7 +77,7 @@ it('rejects invalid input without creating a policy', function () {
 it('updates a policy field via the edit form', function () {
     $insurance = Insurance::factory()->create(['insurance_company' => 'Lonpac']);
 
-    $this->get(signedIndexUrl($this->chatId))->assertOk();
+    authenticate($this->chatId, $this->botToken);
 
     $response = $this->put("/insurances/{$insurance->id}", insuranceFormPayload([
         'policy_no' => $insurance->policy_no,
@@ -91,11 +94,11 @@ it('deletes a policy and notifies the telegram chat', function () {
     $this->mock(Api::class, function ($mock) use ($insurance) {
         $mock->shouldReceive('sendMessage')->once()
             ->withArgs(fn (array $params) => $params['chat_id'] === $this->chatId
-                && str_contains($params['text'], "Deleted policy {$insurance->policy_no}"))
+                && str_contains($params['text'], "បានលុបបណ្ណសន្យា {$insurance->policy_no}"))
             ->andReturn(new Message([]));
     });
 
-    $this->get(signedIndexUrl($this->chatId))->assertOk();
+    authenticate($this->chatId, $this->botToken);
 
     $this->delete("/insurances/{$insurance->id}")->assertRedirect('/insurances');
 

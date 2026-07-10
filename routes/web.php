@@ -2,13 +2,20 @@
 
 use App\Http\Controllers\InsuranceController;
 use App\Http\Controllers\InsuranceFormController;
+use App\Http\Controllers\InsuranceNotificationController;
+use App\Http\Controllers\TelegramAuthController;
+use App\Http\Controllers\TelegramLaunchController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('/telegram/launch', TelegramLaunchController::class)->name('telegram.launch');
+Route::post('/telegram/auth', TelegramAuthController::class)->name('telegram.auth');
+
 Route::middleware('telegram.chat')->group(function () {
+    Route::get('insurances-notifications', InsuranceNotificationController::class)->name('insurances.notifications');
     Route::resource('insurances', InsuranceController::class)->except('show');
 });
 

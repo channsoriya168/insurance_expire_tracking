@@ -85,6 +85,19 @@ final class InsuranceService
     }
 
     /**
+     * Total count of overdue and soon-to-expire policies, for a lightweight
+     * notification badge (see {@see self::expiringGroups()} for the full list).
+     */
+    public function expiringCount(): int
+    {
+        /** @var list<int> $thresholds */
+        $thresholds = config('insurance-bot.expiry_thresholds');
+
+        return Insurance::query()->expired()->count()
+            + collect($thresholds)->sum(fn (int $days): int => Insurance::query()->expiringInDays($days)->count());
+    }
+
+    /**
      * @return Builder<Insurance>
      */
     public function exportQuery(ExpiryDateRange $range): Builder

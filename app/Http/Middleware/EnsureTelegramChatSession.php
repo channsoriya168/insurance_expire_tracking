@@ -6,37 +6,24 @@ use App\Telegram\AllowedChats;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 /**
  * Authorizes access to the Insurance Mini App.
  *
- * The first request must carry a valid Telegram-signed URL (see
- * App\Telegram\FormLinks::app()) with a `chat` query param for an allowed
- * chat id; once validated, the chat id is stashed in the session so that
- * subsequent in-app Inertia navigation doesn't need to be re-signed.
+ * Authentication happens once, client-side, via Telegram's `initData`
+ * handshake (see TelegramAuthController), which stashes the chat id in the
+ * session. This middleware just checks that session; if it's missing or no
+ * longer allowed, it bounces the request back to the launch page to redo
+ * the handshake instead of showing a raw error.
  */
 class EnsureTelegramChatSession
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->hasValidSignature()) {
-            $chatId = (int) $request->query('chat', 0);
-
-            if ($chatId === 0 || ! AllowedChats::contains($chatId)) {
-                throw new AccessDeniedHttpException('This link is no longer authorized.');
-            }
-
-            $request->session()->regenerate();
-            $request->session()->put('telegram_chat_id', $chatId);
-
-            return $next($request);
-        }
-
         $chatId = (int) $request->session()->get('telegram_chat_id', 0);
 
         if ($chatId === 0 || ! AllowedChats::contains($chatId)) {
-            throw new AccessDeniedHttpException('Please reopen this app from Telegram.');
+            return redirect()->route('telegram.launch');
         }
 
         return $next($request);

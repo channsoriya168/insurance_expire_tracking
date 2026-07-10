@@ -18,11 +18,11 @@ final class StartCommand extends Command
         $chatId = (int) $this->getUpdate()->getChat()->get('id');
 
         $this->replyWithMessage([
-            'text' => 'Welcome to the Insurance Bot. Choose an action below.',
+            'text' => 'សូមស្វាគមន៍មកកាន់ Insurance Bot។ សូមជ្រើសរើសសកម្មភាពខាងក្រោម។',
             'reply_markup' => json_encode([
                 'inline_keyboard' => [
-                    [['text' => '📋 Manage Policies', 'web_app' => ['url' => FormLinks::app($chatId)]]],
-                    [['text' => '📤 Export Policies', 'web_app' => ['url' => FormLinks::export($chatId)]]],
+                    [['text' => '📋 គ្រប់គ្រងបណ្ណសន្យារ៉ាប់រង', 'web_app' => ['url' => FormLinks::launch()]]],
+                    [['text' => '📤 នាំចេញបណ្ណសន្យារ៉ាប់រង', 'web_app' => ['url' => FormLinks::export($chatId)]]],
                 ],
             ]),
         ]);

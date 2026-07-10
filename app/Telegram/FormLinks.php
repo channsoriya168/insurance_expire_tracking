@@ -8,13 +8,9 @@ final class FormLinks
 {
     private const int EXPIRES_IN_MINUTES = 30;
 
-    public static function app(int $chatId): string
+    public static function launch(): string
     {
-        return URL::temporarySignedRoute(
-            'insurances.index',
-            now()->addMinutes(self::EXPIRES_IN_MINUTES),
-            ['chat' => $chatId],
-        );
+        return route('telegram.launch');
     }
 
     public static function export(int $chatId, ?string $filter = null): string
