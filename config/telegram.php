@@ -1,5 +1,10 @@
 <?php
 
+use App\Telegram\Commands\AddCommand;
+use App\Telegram\Commands\DeleteCommand;
+use App\Telegram\Commands\EditCommand;
+use App\Telegram\Commands\ExportCommand;
+use App\Telegram\Commands\StartCommand;
 use Telegram\Bot\Commands\HelpCommand;
 
 return [
@@ -40,7 +45,11 @@ return [
              */
             'allowed_updates' => null,
             'commands' => [
-                // Acme\Project\Commands\MyTelegramBot\BotCommand::class
+                StartCommand::class,
+                AddCommand::class,
+                EditCommand::class,
+                DeleteCommand::class,
+                ExportCommand::class,
             ],
         ],
 
@@ -184,7 +193,7 @@ return [
             ],
         */
 
-        /* // Group Type: 4
+    /* // Group Type: 4
            'myBot' => [
                 'admin', // Command Group Name.
                 'subscription', // Command Group Name.

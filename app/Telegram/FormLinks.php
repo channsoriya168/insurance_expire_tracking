@@ -1,0 +1,46 @@
+<?php
+
+namespace App\Telegram;
+
+use Illuminate\Support\Facades\URL;
+
+final class FormLinks
+{
+    private const int EXPIRES_IN_MINUTES = 30;
+
+    public static function create(int $chatId): string
+    {
+        return URL::temporarySignedRoute(
+            'forms.insurances.create',
+            now()->addMinutes(self::EXPIRES_IN_MINUTES),
+            ['chat' => $chatId],
+        );
+    }
+
+    public static function edit(int $chatId, ?string $policyNo = null): string
+    {
+        return URL::temporarySignedRoute(
+            'forms.insurances.edit',
+            now()->addMinutes(self::EXPIRES_IN_MINUTES),
+            array_filter(['chat' => $chatId, 'policy_no' => $policyNo], fn (mixed $value): bool => $value !== null),
+        );
+    }
+
+    public static function delete(int $chatId, ?string $policyNo = null): string
+    {
+        return URL::temporarySignedRoute(
+            'forms.insurances.delete',
+            now()->addMinutes(self::EXPIRES_IN_MINUTES),
+            array_filter(['chat' => $chatId, 'policy_no' => $policyNo], fn (mixed $value): bool => $value !== null),
+        );
+    }
+
+    public static function export(int $chatId, ?string $filter = null): string
+    {
+        return URL::temporarySignedRoute(
+            'forms.insurances.export',
+            now()->addMinutes(self::EXPIRES_IN_MINUTES),
+            array_filter(['chat' => $chatId, 'filter' => $filter], fn (mixed $value): bool => $value !== null),
+        );
+    }
+}
