@@ -8,30 +8,12 @@ final class FormLinks
 {
     private const int EXPIRES_IN_MINUTES = 30;
 
-    public static function create(int $chatId): string
+    public static function app(int $chatId): string
     {
         return URL::temporarySignedRoute(
-            'forms.insurances.create',
+            'insurances.index',
             now()->addMinutes(self::EXPIRES_IN_MINUTES),
             ['chat' => $chatId],
-        );
-    }
-
-    public static function edit(int $chatId, ?string $policyNo = null): string
-    {
-        return URL::temporarySignedRoute(
-            'forms.insurances.edit',
-            now()->addMinutes(self::EXPIRES_IN_MINUTES),
-            array_filter(['chat' => $chatId, 'policy_no' => $policyNo], fn (mixed $value): bool => $value !== null),
-        );
-    }
-
-    public static function delete(int $chatId, ?string $policyNo = null): string
-    {
-        return URL::temporarySignedRoute(
-            'forms.insurances.delete',
-            now()->addMinutes(self::EXPIRES_IN_MINUTES),
-            array_filter(['chat' => $chatId, 'policy_no' => $policyNo], fn (mixed $value): bool => $value !== null),
         );
     }
 

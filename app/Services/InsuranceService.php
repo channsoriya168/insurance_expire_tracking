@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Insurance;
 use App\Support\ExpiryDateRange;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -22,6 +23,34 @@ final class InsuranceService
         $insurance->update([$field => $value]);
 
         return $insurance;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public function update(Insurance $insurance, array $data): Insurance
+    {
+        $insurance->update($data);
+
+        return $insurance;
+    }
+
+    /**
+     * @return LengthAwarePaginator<int, Insurance>
+     */
+    public function paginate(?string $search, ?string $status): LengthAwarePaginator
+    {
+        return Insurance::query()
+            ->select(['id', 'policy_no', 'insurance_company', 'insured_name', 'policy_type', 'status', 'expiry_date'])
+            ->when($search, fn (Builder $query) => $query->where(function (Builder $query) use ($search): void {
+                $query->where('policy_no', 'like', "%{$search}%")
+                    ->orWhere('insured_name', 'like', "%{$search}%")
+                    ->orWhere('insurance_company', 'like', "%{$search}%");
+            }))
+            ->when($status, fn (Builder $query) => $query->where('status', $status))
+            ->orderBy('expiry_date')
+            ->paginate(15)
+            ->withQueryString();
     }
 
     public function delete(Insurance $insurance): void

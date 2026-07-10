@@ -18,7 +18,7 @@ final class AddCommand extends Command
         $this->replyWithMessage([
             'text' => 'Tap below to add a new policy. The link expires in 30 minutes.',
             'reply_markup' => json_encode([
-                'inline_keyboard' => [[['text' => 'Open Add Form', 'web_app' => ['url' => FormLinks::create($chatId)]]]],
+                'inline_keyboard' => [[['text' => 'Open Add Form', 'web_app' => ['url' => FormLinks::app($chatId)]]]],
             ]),
         ]);
     }
