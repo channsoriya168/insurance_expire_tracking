@@ -23,6 +23,10 @@ it('sends a summary to every allowed chat id', function () {
                     ->toContain($in20->policy_no)
                     ->toContain($in30->policy_no);
 
+                $keyboard = json_decode($params['reply_markup'], true);
+                $url = $keyboard['inline_keyboard'][0][0]['web_app']['url'];
+                expect($url)->toContain('/telegram/launch')->toContain('redirect=notifications');
+
                 return true;
             });
     });

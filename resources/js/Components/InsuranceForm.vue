@@ -1,6 +1,11 @@
 <script setup>
 import { computed } from 'vue';
 import { INSURANCE_FIELDS } from '@/insuranceFields';
+import { Button } from '@/Components/ui/button';
+import { Input } from '@/Components/ui/input';
+import { Label } from '@/Components/ui/label';
+import { Textarea } from '@/Components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
 
 const props = defineProps({
     form: { type: Object, required: true },
@@ -33,12 +38,10 @@ const sections = computed(() => {
 });
 
 const fieldClass =
-    'mt-1.5 block w-full min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[15px] text-slate-900 outline-none transition-colors focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/15';
-
-const dateFieldClass = `${fieldClass} appearance-none`;
+    'mt-1.5 h-auto w-full rounded-xl border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[15px] text-slate-900 focus-visible:border-brand-500 focus-visible:bg-white focus-visible:ring-brand-500/15';
 
 function inputClass(field) {
-    return field.type === 'date' ? dateFieldClass : fieldClass;
+    return field.type === 'date' ? `${fieldClass} appearance-none` : fieldClass;
 }
 </script>
 
@@ -53,16 +56,22 @@ function inputClass(field) {
 
             <div class="space-y-4">
                 <div v-for="field in section.fields" :key="field.key">
-                    <label :for="field.key" class="block text-sm font-medium text-slate-600">
+                    <Label :for="field.key" class="text-sm font-medium text-slate-600">
                         {{ field.label }}<span v-if="field.required" class="text-red-500"> *</span>
-                    </label>
+                    </Label>
 
-                    <select v-if="field.type === 'select'" :id="field.key" v-model="form[field.key]" :class="fieldClass">
-                        <option value="" disabled>Select {{ field.label.toLowerCase() }}</option>
-                        <option v-for="method in contactMethods" :key="method" :value="method">{{ method }}</option>
-                    </select>
+                    <Select v-if="field.type === 'select'" v-model="form[field.key]">
+                        <SelectTrigger :id="field.key" :class="fieldClass">
+                            <SelectValue :placeholder="`Select ${field.label.toLowerCase()}`" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem v-for="method in contactMethods" :key="method" :value="method">
+                                {{ method }}
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
 
-                    <textarea
+                    <Textarea
                         v-else-if="field.type === 'textarea'"
                         :id="field.key"
                         v-model="form[field.key]"
@@ -71,7 +80,7 @@ function inputClass(field) {
                         :class="fieldClass"
                     />
 
-                    <input
+                    <Input
                         v-else
                         :id="field.key"
                         v-model="form[field.key]"
@@ -97,11 +106,11 @@ function inputClass(field) {
 
                 <div class="mt-3 space-y-4 border-t border-slate-200 pt-4">
                     <div v-for="field in section.advancedFields" :key="field.key">
-                        <label :for="field.key" class="block text-sm font-medium text-slate-600">
+                        <Label :for="field.key" class="text-sm font-medium text-slate-600">
                             {{ field.label }}
-                        </label>
+                        </Label>
 
-                        <input
+                        <Input
                             :id="field.key"
                             v-model="form[field.key]"
                             :type="field.type"
@@ -118,16 +127,16 @@ function inputClass(field) {
             </details>
         </section>
 
-        <button
+        <Button
             type="submit"
             :disabled="form.processing"
-            class="flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-4 py-3.5 text-[15px] font-bold text-white shadow-md shadow-brand-600/25 transition-transform active:scale-[0.98] disabled:opacity-50"
+            class="h-auto w-full gap-2 rounded-full bg-brand-900 px-4 py-3.5 text-[15px] font-bold text-white shadow-md shadow-brand-900/25 hover:bg-brand-900 active:scale-[0.98] disabled:opacity-50"
         >
             <span
                 v-if="form.processing"
                 class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
             />
             {{ submitLabel }}
-        </button>
+        </Button>
     </form>
 </template>

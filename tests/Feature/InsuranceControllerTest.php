@@ -48,6 +48,19 @@ it('establishes a session via the initData handshake and renders the list', func
     expect(session('telegram_chat_id'))->toBe($this->chatId);
 });
 
+it('shows a policy full details', function () {
+    $insurance = Insurance::factory()->create(['insured_name' => 'Test Garment Co., Ltd.']);
+
+    authenticate($this->chatId, $this->botToken);
+
+    $this->get("/insurances/{$insurance->id}")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Insurances/Show')
+            ->where('insurance.id', $insurance->id)
+            ->where('insurance.insured_name', 'Test Garment Co., Ltd.'));
+});
+
 it('creates a policy and notifies the telegram chat', function () {
     $this->mock(Api::class, function ($mock) {
         $mock->shouldReceive('sendMessage')->once()
@@ -103,6 +116,49 @@ it('deletes a policy and notifies the telegram chat', function () {
     $this->delete("/insurances/{$insurance->id}")->assertRedirect('/insurances');
 
     expect(Insurance::find($insurance->id))->toBeNull();
+});
+
+it('filters the list by the expiry tabs', function () {
+    $expired = Insurance::factory()->expired()->create();
+    $today = Insurance::factory()->create(['expiry_date' => today()]);
+    $in10 = Insurance::factory()->expiringInDays(10)->create();
+    $in20 = Insurance::factory()->expiringInDays(20)->create();
+    Insurance::factory()->create(['expiry_date' => today()->addDays(90)]);
+
+    authenticate($this->chatId, $this->botToken);
+
+    $this->get('/insurances?expiry=expired')
+        ->assertInertia(fn ($page) => $page
+            ->where('insurances.data.0.id', $expired->id)
+            ->where('insurances.total', 1));
+
+    $this->get('/insurances?expiry=not_expired')
+        ->assertInertia(fn ($page) => $page->where('insurances.total', 4));
+
+    $this->get('/insurances?expiry=today')
+        ->assertInertia(fn ($page) => $page
+            ->where('insurances.data.0.id', $today->id)
+            ->where('insurances.total', 1));
+
+    $this->get('/insurances?expiry=10')
+        ->assertInertia(fn ($page) => $page
+            ->where('insurances.data.0.id', $in10->id)
+            ->where('insurances.total', 1));
+
+    $this->get('/insurances?expiry=20')
+        ->assertInertia(fn ($page) => $page
+            ->where('insurances.data.0.id', $in20->id)
+            ->where('insurances.total', 1));
+
+    $this->get('/insurances')
+        ->assertInertia(fn ($page) => $page
+            ->where('filters.date', today()->toDateString())
+            ->where('insurances.data.0.id', $today->id)
+            ->where('insurances.total', 1)
+            ->where('expiryThresholds', [10, 20, 30]));
+
+    $this->get('/insurances?expiry=expired')
+        ->assertInertia(fn ($page) => $page->where('filters.date', null));
 });
 
 function insuranceFormPayload(array $overrides = []): array

@@ -19,7 +19,7 @@ function submit() {
 </script>
 
 <template>
-    <AppLayout title="Edit Insurance Policy">
+    <AppLayout title="Edit Insurance Policy" :back-href="`/insurances/${insurance.id}`">
         <InsuranceForm
             :form="form"
             :contact-methods="contactMethods"

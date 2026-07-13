@@ -3,6 +3,10 @@ import { router } from '@inertiajs/vue3';
 import { onMounted, ref } from 'vue';
 import Icon from '@/Components/Icon.vue';
 
+const props = defineProps({
+    redirect: { type: String, default: null },
+});
+
 const status = ref('authenticating');
 
 function attemptAuth() {
@@ -17,7 +21,7 @@ function attemptAuth() {
 
     router.post(
         '/telegram/auth',
-        { init_data: initData },
+        { init_data: initData, redirect: props.redirect },
         {
             onError: () => {
                 status.value = 'unauthorized';
@@ -37,23 +41,23 @@ onMounted(attemptAuth);
 
         <template v-if="status === 'authenticating'">
             <div class="h-8 w-8 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
-            <p class="text-sm text-slate-500">កំពុងបើកបញ្ជីបណ្ណសន្យារ៉ាប់រង&hellip;</p>
+            <p class="text-sm text-slate-500">Opening insurance policy list&hellip;</p>
         </template>
 
         <template v-else-if="status === 'no-telegram'">
-            <p class="text-base font-semibold">សូមបើកកម្មវិធីនេះពី Telegram</p>
-            <p class="text-sm text-slate-500">កម្មវិធីនេះដំណើរការតែនៅក្នុងផ្ទាំង Telegram Mini App ប៉ុណ្ណោះ។</p>
+            <p class="text-base font-semibold">Please open this app from Telegram</p>
+            <p class="text-sm text-slate-500">This app only works inside the Telegram Mini App.</p>
         </template>
 
         <template v-else>
-            <p class="text-base font-semibold">មិនមានសិទ្ធិប្រើប្រាស់</p>
-            <p class="text-sm text-slate-500">គណនី Telegram នេះមិនត្រូវបានអនុញ្ញាតឱ្យប្រើប្រាស់កម្មវិធីនេះទេ។</p>
+            <p class="text-base font-semibold">Access denied</p>
+            <p class="text-sm text-slate-500">This Telegram account is not authorized to use this app.</p>
             <button
                 type="button"
-                class="mt-2 flex items-center gap-2 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-brand-600/25 transition-transform active:scale-[0.98]"
+                class="mt-2 flex items-center gap-2 rounded-full bg-brand-900 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-brand-900/25 transition-transform active:scale-[0.98]"
                 @click="attemptAuth"
             >
-                ព្យាយាមម្តងទៀត
+                Try again
             </button>
         </template>
     </div>

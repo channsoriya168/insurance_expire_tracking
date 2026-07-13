@@ -16,7 +16,7 @@ Route::post('/telegram/auth', TelegramAuthController::class)->name('telegram.aut
 
 Route::middleware('telegram.chat')->group(function () {
     Route::get('insurances-notifications', InsuranceNotificationController::class)->name('insurances.notifications');
-    Route::resource('insurances', InsuranceController::class)->except('show');
+    Route::resource('insurances', InsuranceController::class);
 });
 
 Route::middleware('signed')->prefix('forms/insurances')->name('forms.insurances.')->group(function () {

@@ -19,7 +19,7 @@ class SetTelegramMenuButton extends Command
         $telegram->post('setChatMenuButton', [
             'menu_button' => json_encode([
                 'type' => 'web_app',
-                'text' => 'បើកកម្មវិធី',
+                'text' => 'Open App',
                 'web_app' => ['url' => $url],
             ]),
         ]);

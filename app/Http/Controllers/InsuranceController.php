@@ -19,10 +19,19 @@ final class InsuranceController extends Controller
 
     public function index(Request $request): Response
     {
-        $insurances = $this->insurances->paginate(
-            $request->string('search')->trim()->value() ?: null,
-            $request->string('status')->trim()->value() ?: null,
-        );
+        $search = $request->string('search')->trim()->value() ?: null;
+        $status = $request->string('status')->trim()->value() ?: null;
+        $expiry = $request->string('expiry')->trim()->value() ?: null;
+
+        // Default the calendar strip to today until the user picks a
+        // different day or an expiry tab (which takes over the date range).
+        $date = match (true) {
+            $request->has('date') => $request->string('date')->trim()->value() ?: null,
+            $request->has('expiry') => null,
+            default => today()->toDateString(),
+        };
+
+        $insurances = $this->insurances->paginate($search, $status, $expiry, $date);
 
         $insurances->through(fn (Insurance $insurance): array => [
             'id' => $insurance->id,
@@ -36,7 +45,20 @@ final class InsuranceController extends Controller
 
         return Inertia::render('Insurances/Index', [
             'insurances' => $insurances,
-            'filters' => $request->only(['search', 'status']),
+            'filters' => [
+                'search' => $search,
+                'status' => $status,
+                'expiry' => $expiry,
+                'date' => $date,
+            ],
+            'expiryThresholds' => config('insurance-bot.expiry_thresholds'),
+        ]);
+    }
+
+    public function show(Insurance $insurance): Response
+    {
+        return Inertia::render('Insurances/Show', [
+            'insurance' => $this->toFormArray($insurance),
         ]);
     }
 

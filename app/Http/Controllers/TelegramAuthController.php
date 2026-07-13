@@ -21,6 +21,11 @@ final class TelegramAuthController extends Controller
         $request->session()->regenerate();
         $request->session()->put('telegram_chat_id', $user['id']);
 
-        return redirect()->route('insurances.index');
+        $route = match ($request->string('redirect')->trim()->value()) {
+            'notifications' => 'insurances.notifications',
+            default => 'insurances.index',
+        };
+
+        return redirect()->route($route);
     }
 }

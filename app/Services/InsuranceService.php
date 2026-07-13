@@ -38,19 +38,43 @@ final class InsuranceService
     /**
      * @return LengthAwarePaginator<int, Insurance>
      */
-    public function paginate(?string $search, ?string $status): LengthAwarePaginator
-    {
+    public function paginate(
+        ?string $search,
+        ?string $status,
+        ?string $expiry = null,
+        ?string $date = null,
+    ): LengthAwarePaginator {
         return Insurance::query()
             ->select(['id', 'policy_no', 'insurance_company', 'insured_name', 'policy_type', 'status', 'expiry_date'])
-            ->when($search, fn(Builder $query) => $query->where(function (Builder $query) use ($search): void {
+            ->when($search, fn (Builder $query) => $query->where(function (Builder $query) use ($search): void {
                 $query->where('policy_no', 'like', "%{$search}%")
                     ->orWhere('insured_name', 'like', "%{$search}%")
                     ->orWhere('insurance_company', 'like', "%{$search}%");
             }))
-            ->when($status, fn(Builder $query) => $query->where('status', $status))
+            ->when($status, fn (Builder $query) => $query->where('status', $status))
+            ->when($expiry, fn (Builder $query) => $this->applyExpiryFilter($query, $expiry))
+            ->when($date, fn (Builder $query) => $query->whereDate('expiry_date', $date))
             ->orderBy('expiry_date')
             ->paginate(15)
             ->withQueryString();
+    }
+
+    /**
+     * Filters the List page's expiry tabs: "expired", "not_expired",
+     * "today", or a day count matching one of the configured notification
+     * thresholds (e.g. "10", "20", "30").
+     *
+     * @param  Builder<Insurance>  $query
+     */
+    private function applyExpiryFilter(Builder $query, string $expiry): void
+    {
+        match (true) {
+            $expiry === 'expired' => $query->expired(),
+            $expiry === 'not_expired' => $query->whereDate('expiry_date', '>=', today()),
+            $expiry === 'today' => $query->expiringOn(today()),
+            ctype_digit($expiry) => $query->expiringInDays((int) $expiry),
+            default => null,
+        };
     }
 
     public function delete(Insurance $insurance): void
@@ -77,7 +101,7 @@ final class InsuranceService
         return [
             'overdue' => Insurance::query()->expired()->orderBy('expiry_date')->get(),
             'buckets' => collect($thresholds)
-                ->mapWithKeys(fn(int $days): array => [
+                ->mapWithKeys(fn (int $days): array => [
                     $days => Insurance::query()->expiringInDays($days)->orderBy('expiry_date')->get(),
                 ])
                 ->all(),
@@ -94,7 +118,36 @@ final class InsuranceService
         $thresholds = config('insurance-bot.expiry_thresholds');
 
         return Insurance::query()->expired()->count()
-            + collect($thresholds)->sum(fn(int $days): int => Insurance::query()->expiringInDays($days)->count());
+            + collect($thresholds)->sum(fn (int $days): int => Insurance::query()->expiringInDays($days)->count());
+    }
+
+    /**
+     * Summary counts for the Mini App home screen.
+     *
+     * @return array{total: int, overdue: int, expiringSoon: int}
+     */
+    public function dashboardStats(): array
+    {
+        return [
+            'total' => Insurance::query()->count(),
+            'overdue' => Insurance::query()->expired()->count(),
+            'expiringSoon' => Insurance::query()->expiringBetween(today(), today()->addDays(30))->count(),
+        ];
+    }
+
+    /**
+     * Nearest upcoming policies (not yet expired), for the home screen preview.
+     *
+     * @return Collection<int, Insurance>
+     */
+    public function upcoming(int $limit = 5): Collection
+    {
+        return Insurance::query()
+            ->select(['id', 'policy_no', 'insurance_company', 'insured_name', 'expiry_date'])
+            ->whereDate('expiry_date', '>=', today())
+            ->orderBy('expiry_date')
+            ->limit($limit)
+            ->get();
     }
 
     /**
@@ -105,7 +158,7 @@ final class InsuranceService
         return Insurance::query()
             ->when(
                 ! $range->isUnfiltered(),
-                fn(Builder $query) => $query->expiringBetween($range->from, $range->to),
+                fn (Builder $query) => $query->expiringBetween($range->from, $range->to),
             )
             ->orderBy('expiry_date');
     }

@@ -7,10 +7,18 @@ import Icon from '@/Components/Icon.vue';
 const props = defineProps({
     overdue: { type: Array, required: true },
     buckets: { type: Object, required: true },
+    notificationTime: { type: String, default: null },
 });
 
 const sections = computed(() => [
-    { key: 'overdue', title: 'Already Expired', policies: props.overdue, colorClass: 'text-red-500', accentClass: 'bg-red-500' },
+    {
+        key: 'overdue',
+        title: 'Already Expired',
+        policies: props.overdue,
+        colorClass: 'text-red-500',
+        accentClass: 'bg-red-500',
+        badgeClass: 'bg-red-50 text-red-600',
+    },
     ...Object.entries(props.buckets)
         .sort(([a], [b]) => Number(a) - Number(b))
         .map(([days, policies]) => ({
@@ -19,28 +27,51 @@ const sections = computed(() => [
             policies,
             colorClass: Number(days) <= 10 ? 'text-red-500' : 'text-amber-500',
             accentClass: Number(days) <= 10 ? 'bg-red-500' : 'bg-amber-500',
+            badgeClass: Number(days) <= 10 ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600',
         })),
 ]);
 
-const isEmpty = computed(() => sections.value.every((section) => section.policies.length === 0));
+const totalCount = computed(() => sections.value.reduce((sum, section) => sum + section.policies.length, 0));
+const isEmpty = computed(() => totalCount.value === 0);
+
+const formattedNotificationTime = computed(() => {
+    if (!props.notificationTime) {
+        return null;
+    }
+
+    const [hours, minutes] = props.notificationTime.split(':').map(Number);
+    return new Date(2000, 0, 1, hours, minutes).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+});
 </script>
 
 <template>
-    <AppLayout title="Notifications">
+    <AppLayout title="Notifications" back-href="/insurances" hide-notifications>
         <div class="space-y-6">
+            <div
+                v-if="formattedNotificationTime"
+                class="flex items-center gap-2.5 rounded-2xl border border-brand-100 bg-brand-50 px-4 py-3 text-sm text-brand-700"
+            >
+                <Icon name="bell" class="h-4.5 w-4.5 shrink-0" />
+                <p>This list matches the daily Telegram alert sent at <span class="font-semibold">{{ formattedNotificationTime }}</span>.</p>
+            </div>
+
+            <p v-if="!isEmpty" class="text-xs font-medium text-slate-400">
+                {{ totalCount }} polic{{ totalCount === 1 ? 'y' : 'ies' }} need attention
+            </p>
+
             <section v-for="section in sections" :key="section.key" v-show="section.policies.length > 0">
                 <h2 class="mb-2 flex items-center gap-1.5 text-sm font-semibold" :class="section.colorClass">
                     <Icon name="alert-triangle" class="h-4 w-4 shrink-0" />
                     {{ section.title }}
-                    <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">{{ section.policies.length }}</span>
+                    <span class="rounded-full px-2.5 py-0.5 text-xs font-medium" :class="section.badgeClass">{{ section.policies.length }}</span>
                 </h2>
 
-                <div class="space-y-2">
+                <div class="space-y-2.5">
                     <Link
                         v-for="policy in section.policies"
                         :key="policy.id"
                         :href="`/insurances/${policy.id}/edit`"
-                        class="flex items-center gap-3 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm shadow-slate-200/60 transition-colors active:bg-slate-50"
+                        class="flex items-center gap-3 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm shadow-slate-200/60 transition-shadow active:bg-slate-50 hover:shadow-md hover:shadow-slate-200/70"
                     >
                         <span class="h-full w-1.5 self-stretch" :class="section.accentClass" />
 
@@ -52,8 +83,9 @@ const isEmpty = computed(() => sections.value.every((section) => section.policie
                                     {{ policy.expiry_date }}
                                 </span>
                             </div>
-                            <p class="mt-1 truncate text-sm text-slate-500">
-                                {{ policy.insurance_company }} · {{ policy.insured_name }}
+                            <p class="mt-1 flex items-center gap-1.5 truncate text-sm text-slate-500">
+                                <Icon name="building" class="h-3.5 w-3.5 shrink-0" />
+                                <span class="truncate">{{ policy.insurance_company }} · {{ policy.insured_name }}</span>
                             </p>
                         </div>
 

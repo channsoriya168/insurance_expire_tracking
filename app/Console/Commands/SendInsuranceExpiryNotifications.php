@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Insurance;
 use App\Services\InsuranceService;
 use App\Telegram\AllowedChats;
+use App\Telegram\FormLinks;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -29,7 +30,13 @@ class SendInsuranceExpiryNotifications extends Command
         $message = $this->formatMessage($groups);
 
         foreach (AllowedChats::ids() as $chatId) {
-            $telegram->sendMessage(['chat_id' => $chatId, 'text' => $message]);
+            $telegram->sendMessage([
+                'chat_id' => $chatId,
+                'text' => $message,
+                'reply_markup' => json_encode([
+                    'inline_keyboard' => [[['text' => '🔔 View in App', 'web_app' => ['url' => FormLinks::launch('notifications')]]]],
+                ]),
+            ]);
         }
 
         return self::SUCCESS;
@@ -52,12 +59,12 @@ class SendInsuranceExpiryNotifications extends Command
         $sections = [];
 
         if ($groups['overdue']->isNotEmpty()) {
-            $sections[] = "ផុតកំណត់រួចហើយ:\n".$this->formatList($groups['overdue']);
+            $sections[] = "Already expired:\n".$this->formatList($groups['overdue']);
         }
 
         foreach ($groups['buckets'] as $days => $policies) {
             if ($policies->isNotEmpty()) {
-                $sections[] = "ផុតកំណត់ក្នុងរយៈពេល {$days} ថ្ងៃ:\n".$this->formatList($policies);
+                $sections[] = "Expiring in {$days} days:\n".$this->formatList($policies);
             }
         }
 
@@ -71,7 +78,7 @@ class SendInsuranceExpiryNotifications extends Command
     {
         return $policies
             ->map(fn (Insurance $insurance): string => sprintf(
-                '- %s (%s) ផុតកំណត់ %s',
+                '- %s (%s) expires %s',
                 $insurance->policy_no,
                 $insurance->insured_name,
                 $insurance->expiry_date->format('Y-m-d'),

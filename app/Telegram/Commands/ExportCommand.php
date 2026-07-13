@@ -22,9 +22,9 @@ final class ExportCommand extends Command
         $filter = $filter !== null && trim($filter) !== '' ? trim($filter) : null;
 
         $this->replyWithMessage([
-            'text' => 'សូមចុចខាងក្រោមដើម្បីនាំចេញបញ្ជីបណ្ណសន្យារ៉ាប់រង។ តំណនេះនឹងផុតកំណត់ក្នុងរយៈពេល ៣០ នាទី។',
+            'text' => 'Tap below to export the list of insurance policies. This link will expire in 30 minutes.',
             'reply_markup' => json_encode([
-                'inline_keyboard' => [[['text' => 'បើកទម្រង់នាំចេញ', 'web_app' => ['url' => FormLinks::export($chatId, $filter)]]]],
+                'inline_keyboard' => [[['text' => 'Open export form', 'web_app' => ['url' => FormLinks::export($chatId, $filter)]]]],
             ]),
         ]);
     }

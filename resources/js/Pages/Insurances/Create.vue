@@ -16,7 +16,7 @@ function submit() {
 </script>
 
 <template>
-    <AppLayout title="Add Insurance Policy">
+    <AppLayout title="Add Insurance Policy" back-href="/insurances">
         <InsuranceForm
             :form="form"
             :contact-methods="contactMethods"

@@ -21,6 +21,7 @@ final class InsuranceNotificationController extends Controller
             'buckets' => collect($groups['buckets'])
                 ->map(fn (Collection $policies): array => $this->toArray($policies))
                 ->all(),
+            'notificationTime' => config('insurance-bot.notification_time'),
         ]);
     }
 

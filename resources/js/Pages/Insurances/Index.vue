@@ -1,23 +1,112 @@
 <script setup>
 import { Link, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
+import { ChevronLeft, ChevronRight, Plus, Search } from '@lucide/vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Icon from '@/Components/Icon.vue';
 
 const props = defineProps({
     insurances: { type: Object, required: true },
     filters: { type: Object, required: true },
+    expiryThresholds: { type: Array, default: () => [] },
 });
 
 const search = ref(props.filters.search ?? '');
-const status = ref(props.filters.status ?? '');
+const date = ref(props.filters.date ?? '');
+const expiry = ref(props.filters.expiry ?? '');
+const showSearch = ref(!!search.value);
+
+const expiryTabs = computed(() => [
+    { value: '', label: 'All', icon: 'list', activeClass: 'bg-slate-900 shadow-slate-900/30' },
+    { value: 'not_expired', label: 'Not Expired', icon: 'check-circle', activeClass: 'bg-emerald-600 shadow-emerald-600/30' },
+    { value: 'expired', label: 'Expired', icon: 'alert-triangle', activeClass: 'bg-red-500 shadow-red-500/30' },
+    ...props.expiryThresholds.map((days) => ({
+        value: String(days),
+        label: `${days} Days`,
+        icon: 'calendar',
+        activeClass: days <= 10 ? 'bg-red-500 shadow-red-500/30' : 'bg-amber-500 shadow-amber-500/30',
+    })),
+]);
+
+const today = new Date(new Date().toDateString());
+
+function toValue(d) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function startOfWeek(d) {
+    const monday = new Date(d);
+    const offset = (monday.getDay() + 6) % 7;
+    monday.setDate(monday.getDate() - offset);
+    return monday;
+}
+
+const weekStart = ref(startOfWeek(date.value ? new Date(`${date.value}T00:00:00`) : today));
+
+const weekDays = computed(() =>
+    Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(weekStart.value);
+        d.setDate(weekStart.value.getDate() + i);
+        return d;
+    }),
+);
+
+const monthLabel = computed(() => weekStart.value.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }));
+
+function isSameDay(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function dayNumberClass(d) {
+    if (date.value && toValue(d) === date.value) {
+        return 'bg-brand-900 text-white shadow-sm shadow-brand-900/30';
+    }
+
+    if (isSameDay(d, today)) {
+        return 'font-bold text-brand-700 ring-1 ring-inset ring-brand-200';
+    }
+
+    return 'text-slate-700 active:bg-slate-100';
+}
+
+function prevWeek() {
+    const d = new Date(weekStart.value);
+    d.setDate(d.getDate() - 7);
+    weekStart.value = d;
+}
+
+function nextWeek() {
+    const d = new Date(weekStart.value);
+    d.setDate(d.getDate() + 7);
+    weekStart.value = d;
+}
 
 function applyFilters() {
     router.get(
         '/insurances',
-        { search: search.value || undefined, status: status.value || undefined },
+        {
+            search: search.value || undefined,
+            date: date.value || undefined,
+            expiry: expiry.value || undefined,
+        },
         { preserveState: true, replace: true },
     );
+}
+
+function pickDay(d) {
+    const value = toValue(d);
+    date.value = date.value === value ? '' : value;
+    expiry.value = '';
+    applyFilters();
+}
+
+function pickExpiry(value) {
+    expiry.value = expiry.value === value ? '' : value;
+    date.value = '';
+    applyFilters();
 }
 
 function destroy(insurance) {
@@ -65,57 +154,146 @@ function expiryInfo(dateString) {
 
     return { label: dateString, colorClass: 'text-slate-500', accentClass: 'bg-emerald-500' };
 }
+
+function statusBadgeClass(value) {
+    const normalized = (value || 'Pending').toLowerCase();
+
+    if (['active', 'confirmed', 'approved'].includes(normalized)) {
+        return 'bg-emerald-50 text-emerald-600';
+    }
+
+    if (normalized === 'pending') {
+        return 'bg-amber-50 text-amber-600';
+    }
+
+    if (['cancelled', 'canceled', 'rejected'].includes(normalized)) {
+        return 'bg-red-50 text-red-500';
+    }
+
+    return 'bg-slate-100 text-slate-500';
+}
 </script>
 
 <template>
     <AppLayout title="Insurance Policies">
-        <Link
-            href="/insurances/create"
-            class="mb-4 flex items-center justify-center gap-1.5 rounded-full bg-brand-600 px-4 py-3.5 text-[15px] font-bold text-white shadow-md shadow-brand-600/25 transition-transform active:scale-[0.98]"
-        >
-            <Icon name="plus" class="h-5 w-5" />
-            Add New Policy
-        </Link>
+        <div class="mb-3 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1">
+                <button
+                    type="button"
+                    class="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition-colors active:bg-slate-100"
+                    aria-label="Previous week"
+                    @click="prevWeek"
+                >
+                    <ChevronLeft class="h-4 w-4" />
+                </button>
+                <p class="text-sm font-semibold tracking-tight text-slate-700">{{ monthLabel }}</p>
+                <button
+                    type="button"
+                    class="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition-colors active:bg-slate-100"
+                    aria-label="Next week"
+                    @click="nextWeek"
+                >
+                    <ChevronRight class="h-4 w-4" />
+                </button>
+            </div>
 
-        <form class="mb-4 flex gap-2" @submit.prevent="applyFilters">
-            <div class="relative w-full">
-                <Icon name="search" class="pointer-events-none absolute left-3.5 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-slate-400" />
-                <input
-                    v-model="search"
-                    type="search"
-                    placeholder="Search policy no, insured name, company"
-                    class="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15"
-                />
+            <div class="flex items-center gap-2">
+                <button
+                    type="button"
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition-colors active:scale-95"
+                    :class="
+                        showSearch
+                            ? 'border-brand-200 bg-brand-50 text-brand-700'
+                            : 'border-slate-200 bg-white text-slate-500'
+                    "
+                    aria-label="Toggle search"
+                    @click="showSearch = !showSearch"
+                >
+                    <Search class="h-4.5 w-4.5" />
+                </button>
+
+                <Link
+                    href="/insurances/create"
+                    aria-label="Add new policy"
+                    class="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-brand-900 pl-3.5 pr-4 text-white shadow-sm transition-transform active:scale-95"
+                >
+                    <Plus class="h-4.5 w-4.5" />
+                    <span class="text-sm font-medium">New Policy</span>
+                </Link>
             </div>
-            <div class="relative w-28 shrink-0">
-                <Icon name="filter" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                    v-model="status"
-                    type="text"
-                    placeholder="Status"
-                    class="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-8 pr-2 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15"
-                />
+        </div>
+
+        <Transition
+            enter-active-class="transition duration-150 ease-out"
+            enter-from-class="opacity-0 -translate-y-1"
+            enter-to-class="opacity-100 translate-y-0"
+            leave-active-class="transition duration-100 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <form v-if="showSearch" class="mb-3" @submit.prevent="applyFilters">
+                <div class="relative w-full">
+                    <Icon name="search" class="pointer-events-none absolute left-3.5 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-slate-400" />
+                    <input
+                        v-model="search"
+                        type="search"
+                        autofocus
+                        placeholder="Search policy no, insured name, company"
+                        class="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15"
+                        @change="applyFilters"
+                    />
+                </div>
+            </form>
+        </Transition>
+
+        <div class="mb-3 -mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div v-for="day in weekDays" :key="toValue(day)" class="flex shrink-0 flex-col items-center gap-1.5">
+                <span class="text-[11px] font-medium text-slate-400">{{ day.toLocaleDateString('en-US', { weekday: 'short' }) }}</span>
+                <button
+                    type="button"
+                    class="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-colors active:scale-95"
+                    :class="dayNumberClass(day)"
+                    @click="pickDay(day)"
+                >
+                    {{ day.getDate() }}
+                </button>
             </div>
+        </div>
+
+        <div class="mb-4 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button
-                type="submit"
-                class="shrink-0 rounded-full bg-brand-50 px-4 py-2.5 text-sm font-semibold text-brand-700 transition-transform active:scale-95"
+                v-for="tab in expiryTabs"
+                :key="tab.value"
+                type="button"
+                class="flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors active:scale-95"
+                :class="
+                    expiry === tab.value
+                        ? `${tab.activeClass} text-white shadow-sm`
+                        : 'border border-slate-200 bg-white text-slate-500'
+                "
+                @click="pickExpiry(tab.value)"
             >
-                Filter
+                <Icon :name="tab.icon" class="h-3.5 w-3.5" />
+                {{ tab.label }}
             </button>
-        </form>
+        </div>
+
+        <p class="mb-3 text-xs font-medium text-slate-400">
+            {{ insurances.total }} polic{{ insurances.total === 1 ? 'y' : 'ies' }} found
+        </p>
 
         <div class="space-y-3">
             <div
                 v-for="insurance in insurances.data"
                 :key="insurance.id"
-                class="flex overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm shadow-slate-200/60"
+                class="flex overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm shadow-slate-200/60 transition-shadow hover:shadow-md hover:shadow-slate-200/70"
             >
                 <span class="w-1.5 shrink-0" :class="expiryInfo(insurance.expiry_date).accentClass" />
 
                 <div class="min-w-0 flex-1 p-4">
                     <div class="flex items-start justify-between gap-2">
                         <p class="font-semibold tracking-tight">{{ insurance.policy_no }}</p>
-                        <span class="shrink-0 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">
+                        <span class="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium" :class="statusBadgeClass(insurance.status)">
                             {{ insurance.status || 'Pending' }}
                         </span>
                     </div>
@@ -131,6 +309,13 @@ function expiryInfo(dateString) {
                     </p>
 
                     <div class="mt-3 flex justify-end gap-2 border-t border-slate-100 pt-3 text-sm">
+                        <Link
+                            :href="`/insurances/${insurance.id}`"
+                            class="flex items-center gap-1.5 rounded-full px-3 py-1.5 font-medium text-slate-600 transition-colors active:bg-slate-100"
+                        >
+                            <Icon name="eye" class="h-4 w-4" />
+                            View
+                        </Link>
                         <Link
                             :href="`/insurances/${insurance.id}/edit`"
                             class="flex items-center gap-1.5 rounded-full px-3 py-1.5 font-medium text-brand-700 transition-colors active:bg-brand-50"
@@ -152,10 +337,17 @@ function expiryInfo(dateString) {
 
             <div
                 v-if="insurances.data.length === 0"
-                class="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-slate-200 py-14 text-center"
+                class="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-slate-200 py-14 text-center"
             >
                 <Icon name="inbox" class="h-8 w-8 text-slate-300" />
                 <p class="text-sm text-slate-400">No insurance policies found.</p>
+                <Link
+                    href="/insurances/create"
+                    class="mt-1 flex items-center gap-1.5 rounded-full bg-brand-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition-transform active:scale-95"
+                >
+                    <Plus class="h-4 w-4" />
+                    Add your first policy
+                </Link>
             </div>
         </div>
 
@@ -171,7 +363,7 @@ function expiryInfo(dateString) {
                     :href="link.url"
                     preserve-scroll
                     class="flex h-9 min-w-9 items-center justify-center rounded-full px-2 text-sm font-medium transition-colors"
-                    :class="link.active ? 'bg-brand-600 text-white' : 'text-slate-500 active:bg-slate-100'"
+                    :class="link.active ? 'bg-brand-900 text-white' : 'text-slate-500 active:bg-slate-100'"
                     v-html="link.label"
                 />
             </template>

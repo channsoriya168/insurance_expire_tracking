@@ -8,9 +8,9 @@ final class FormLinks
 {
     private const int EXPIRES_IN_MINUTES = 30;
 
-    public static function launch(): string
+    public static function launch(?string $redirect = null): string
     {
-        return route('telegram.launch');
+        return route('telegram.launch', array_filter(['redirect' => $redirect], fn (mixed $value): bool => $value !== null));
     }
 
     public static function export(int $chatId, ?string $filter = null): string
