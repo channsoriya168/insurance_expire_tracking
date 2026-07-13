@@ -13,7 +13,7 @@ use Illuminate\Support\Collection;
 use Telegram\Bot\Api;
 
 #[Signature('insurance:notify-expiring')]
-#[Description('Send a Telegram summary of overdue and soon-to-expire insurance policies.')]
+#[Description('Send a Telegram summary of soon-to-expire insurance policies.')]
 class SendInsuranceExpiryNotifications extends Command
 {
     /**
@@ -43,23 +43,26 @@ class SendInsuranceExpiryNotifications extends Command
     }
 
     /**
-     * @param  array{overdue: Collection<int, Insurance>, buckets: array<int, Collection<int, Insurance>>}  $groups
+     * @param  array{overdue: Collection<int, Insurance>, today: Collection<int, Insurance>, buckets: array<int, Collection<int, Insurance>>}  $groups
      */
     private function isEmpty(array $groups): bool
     {
-        return $groups['overdue']->isEmpty()
+        return $groups['today']->isEmpty()
             && collect($groups['buckets'])->every(fn (Collection $policies): bool => $policies->isEmpty());
     }
 
     /**
-     * @param  array{overdue: Collection<int, Insurance>, buckets: array<int, Collection<int, Insurance>>}  $groups
+     * Already-expired policies are excluded on purpose: they'd otherwise be
+     * re-announced every single day. Only today/10/20/30-day thresholds notify.
+     *
+     * @param  array{overdue: Collection<int, Insurance>, today: Collection<int, Insurance>, buckets: array<int, Collection<int, Insurance>>}  $groups
      */
     private function formatMessage(array $groups): string
     {
         $sections = [];
 
-        if ($groups['overdue']->isNotEmpty()) {
-            $sections[] = "Already expired:\n".$this->formatList($groups['overdue']);
+        if ($groups['today']->isNotEmpty()) {
+            $sections[] = "Expiring today:\n".$this->formatList($groups['today']);
         }
 
         foreach ($groups['buckets'] as $days => $policies) {

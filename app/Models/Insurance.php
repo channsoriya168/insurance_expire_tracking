@@ -45,6 +45,7 @@ class Insurance extends Model
             'confirmed_date' => 'date',
             'request_policy_date' => 'date',
             'policy_received_date' => 'date',
+            'notification_read_at' => 'datetime',
             'sum_insured' => 'decimal:2',
             'premium' => 'decimal:2',
             'revised_sum_insured' => 'decimal:2',

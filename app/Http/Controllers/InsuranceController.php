@@ -7,11 +7,13 @@ use App\Http\Requests\UpdateInsuranceRequest;
 use App\Models\Insurance;
 use App\Services\InsuranceService;
 use App\Telegram\Conversations\PolicyFieldSteps;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Telegram\Bot\Api;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 final class InsuranceController extends Controller
 {
@@ -20,18 +22,32 @@ final class InsuranceController extends Controller
     public function index(Request $request): Response
     {
         $search = $request->string('search')->trim()->value() ?: null;
-        $status = $request->string('status')->trim()->value() ?: null;
         $expiry = $request->string('expiry')->trim()->value() ?: null;
+        $sort = $request->string('sort')->trim()->value() === 'desc' ? 'desc' : 'asc';
 
-        // Default the calendar strip to today until the user picks a
-        // different day or an expiry tab (which takes over the date range).
-        $date = match (true) {
-            $request->has('date') => $request->string('date')->trim()->value() ?: null,
-            $request->has('expiry') => null,
-            default => today()->toDateString(),
-        };
+        $filters = array_filter(['search' => $search, 'expiry' => $expiry]);
 
-        $insurances = $this->insurances->paginate($search, $status, $expiry, $date);
+        $insurances = QueryBuilder::for(Insurance::class, new Request(['filter' => $filters]))
+            ->select(['id', 'policy_no', 'insurance_company', 'insured_name', 'policy_type', 'status', 'expiry_date'])
+            ->allowedFilters(
+                AllowedFilter::callback('search', function (Builder $query, string $value): void {
+                    $query->where(function (Builder $query) use ($value): void {
+                        $query->where('policy_no', 'like', "%{$value}%")
+                            ->orWhere('insured_name', 'like', "%{$value}%")
+                            ->orWhere('insurance_company', 'like', "%{$value}%");
+                    });
+                }),
+                AllowedFilter::callback('expiry', function (Builder $query, string $value): void {
+                    match (true) {
+                        $value === 'today' => $query->whereDate('expiry_date', today()),
+                        ctype_digit($value) => $query->whereDate('expiry_date', today()->addDays((int) $value)->toDateString()),
+                        default => null,
+                    };
+                }),
+            )
+            ->orderBy('expiry_date', $sort)
+            ->paginate(15)
+            ->withQueryString();
 
         $insurances->through(fn (Insurance $insurance): array => [
             'id' => $insurance->id,
@@ -47,9 +63,8 @@ final class InsuranceController extends Controller
             'insurances' => $insurances,
             'filters' => [
                 'search' => $search,
-                'status' => $status,
                 'expiry' => $expiry,
-                'date' => $date,
+                'sort' => $sort,
             ],
             'expiryThresholds' => config('insurance-bot.expiry_thresholds'),
         ]);
@@ -76,8 +91,6 @@ final class InsuranceController extends Controller
 
         $insurance = $this->insurances->create($data);
 
-        $this->notifyChat($request, "Saved insurance policy #{$insurance->id} ({$insurance->policy_no}) via Mini App.");
-
         return to_route('insurances.index')->with('status', "Policy {$insurance->policy_no} saved.");
     }
 
@@ -96,17 +109,13 @@ final class InsuranceController extends Controller
 
         $this->insurances->update($insurance, $data);
 
-        $this->notifyChat($request, "Updated insurance policy {$insurance->policy_no} via Mini App.");
-
         return to_route('insurances.index')->with('status', "Policy {$insurance->policy_no} updated.");
     }
 
-    public function destroy(Request $request, Insurance $insurance): RedirectResponse
+    public function destroy(Insurance $insurance): RedirectResponse
     {
         $policyNo = $insurance->policy_no;
         $this->insurances->delete($insurance);
-
-        $this->notifyChat($request, "Deleted insurance policy {$policyNo} via Mini App.");
 
         return to_route('insurances.index')->with('status', "Policy {$policyNo} deleted.");
     }
@@ -123,14 +132,5 @@ final class InsuranceController extends Controller
         }
 
         return $fields;
-    }
-
-    private function notifyChat(Request $request, string $text): void
-    {
-        $chatId = (int) $request->session()->get('telegram_chat_id', 0);
-
-        if ($chatId !== 0) {
-            app(Api::class)->sendMessage(['chat_id' => $chatId, 'text' => $text]);
-        }
     }
 }
