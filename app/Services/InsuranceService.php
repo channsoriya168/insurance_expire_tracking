@@ -42,12 +42,12 @@ final class InsuranceService
     {
         return Insurance::query()
             ->select(['id', 'policy_no', 'insurance_company', 'insured_name', 'policy_type', 'status', 'expiry_date'])
-            ->when($search, fn (Builder $query) => $query->where(function (Builder $query) use ($search): void {
+            ->when($search, fn(Builder $query) => $query->where(function (Builder $query) use ($search): void {
                 $query->where('policy_no', 'like', "%{$search}%")
                     ->orWhere('insured_name', 'like', "%{$search}%")
                     ->orWhere('insurance_company', 'like', "%{$search}%");
             }))
-            ->when($status, fn (Builder $query) => $query->where('status', $status))
+            ->when($status, fn(Builder $query) => $query->where('status', $status))
             ->orderBy('expiry_date')
             ->paginate(15)
             ->withQueryString();
@@ -77,7 +77,7 @@ final class InsuranceService
         return [
             'overdue' => Insurance::query()->expired()->orderBy('expiry_date')->get(),
             'buckets' => collect($thresholds)
-                ->mapWithKeys(fn (int $days): array => [
+                ->mapWithKeys(fn(int $days): array => [
                     $days => Insurance::query()->expiringInDays($days)->orderBy('expiry_date')->get(),
                 ])
                 ->all(),
@@ -94,7 +94,7 @@ final class InsuranceService
         $thresholds = config('insurance-bot.expiry_thresholds');
 
         return Insurance::query()->expired()->count()
-            + collect($thresholds)->sum(fn (int $days): int => Insurance::query()->expiringInDays($days)->count());
+            + collect($thresholds)->sum(fn(int $days): int => Insurance::query()->expiringInDays($days)->count());
     }
 
     /**
@@ -105,7 +105,7 @@ final class InsuranceService
         return Insurance::query()
             ->when(
                 ! $range->isUnfiltered(),
-                fn (Builder $query) => $query->expiringBetween($range->from, $range->to),
+                fn(Builder $query) => $query->expiringBetween($range->from, $range->to),
             )
             ->orderBy('expiry_date');
     }

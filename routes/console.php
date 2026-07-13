@@ -11,5 +11,6 @@ Artisan::command('inspire', function () {
 
 Schedule::command(SendInsuranceExpiryNotifications::class)
     ->dailyAt(config('insurance-bot.notification_time'))
+    ->timezone('Asia/Phnom_Penh')
     ->withoutOverlapping()
     ->onOneServer();
