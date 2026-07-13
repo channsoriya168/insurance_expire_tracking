@@ -22,7 +22,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Number of days before expiry at which policies are included in the
-    | daily notification, in addition to already-overdue policies.
+    | daily notification. Already-overdue policies are never notified.
     |
     */
     'expiry_thresholds' => [10, 20, 30],

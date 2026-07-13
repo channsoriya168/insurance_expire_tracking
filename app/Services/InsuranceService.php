@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Insurance;
 use App\Support\ExpiryDateRange;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -35,51 +34,17 @@ final class InsuranceService
         return $insurance;
     }
 
-    /**
-     * @return LengthAwarePaginator<int, Insurance>
-     */
-    public function paginate(
-        ?string $search,
-        ?string $status,
-        ?string $expiry = null,
-        ?string $date = null,
-    ): LengthAwarePaginator {
-        return Insurance::query()
-            ->select(['id', 'policy_no', 'insurance_company', 'insured_name', 'policy_type', 'status', 'expiry_date'])
-            ->when($search, fn (Builder $query) => $query->where(function (Builder $query) use ($search): void {
-                $query->where('policy_no', 'like', "%{$search}%")
-                    ->orWhere('insured_name', 'like', "%{$search}%")
-                    ->orWhere('insurance_company', 'like', "%{$search}%");
-            }))
-            ->when($status, fn (Builder $query) => $query->where('status', $status))
-            ->when($expiry, fn (Builder $query) => $this->applyExpiryFilter($query, $expiry))
-            ->when($date, fn (Builder $query) => $query->whereDate('expiry_date', $date))
-            ->orderBy('expiry_date')
-            ->paginate(15)
-            ->withQueryString();
-    }
-
-    /**
-     * Filters the List page's expiry tabs: "expired", "not_expired",
-     * "today", or a day count matching one of the configured notification
-     * thresholds (e.g. "10", "20", "30").
-     *
-     * @param  Builder<Insurance>  $query
-     */
-    private function applyExpiryFilter(Builder $query, string $expiry): void
-    {
-        match (true) {
-            $expiry === 'expired' => $query->expired(),
-            $expiry === 'not_expired' => $query->whereDate('expiry_date', '>=', today()),
-            $expiry === 'today' => $query->expiringOn(today()),
-            ctype_digit($expiry) => $query->expiringInDays((int) $expiry),
-            default => null,
-        };
-    }
-
     public function delete(Insurance $insurance): void
     {
         $insurance->delete();
+    }
+
+    public function toggleNotificationRead(Insurance $insurance): Insurance
+    {
+        $insurance->notification_read_at = $insurance->notification_read_at ? null : now();
+        $insurance->save();
+
+        return $insurance;
     }
 
     public function findByPolicyNo(string $policyNo): ?Insurance
@@ -88,10 +53,12 @@ final class InsuranceService
     }
 
     /**
-     * Group policies by expiry urgency: already overdue, plus one bucket per
-     * configured day-out threshold (e.g. 10/20/30 days before expiry).
+     * Group policies by expiry urgency: already overdue, expiring today, plus
+     * one bucket per configured day-out threshold (e.g. 10/20/30 days before
+     * expiry). Only these exact days trigger a notification; every other day
+     * count is left out on purpose.
      *
-     * @return array{overdue: Collection<int, Insurance>, buckets: array<int, Collection<int, Insurance>>}
+     * @return array{overdue: Collection<int, Insurance>, today: Collection<int, Insurance>, buckets: array<int, Collection<int, Insurance>>}
      */
     public function expiringGroups(): array
     {
@@ -100,6 +67,7 @@ final class InsuranceService
 
         return [
             'overdue' => Insurance::query()->expired()->orderBy('expiry_date')->get(),
+            'today' => Insurance::query()->expiringOn(today())->orderBy('expiry_date')->get(),
             'buckets' => collect($thresholds)
                 ->mapWithKeys(fn (int $days): array => [
                     $days => Insurance::query()->expiringInDays($days)->orderBy('expiry_date')->get(),
@@ -109,8 +77,9 @@ final class InsuranceService
     }
 
     /**
-     * Total count of overdue and soon-to-expire policies, for a lightweight
-     * notification badge (see {@see self::expiringGroups()} for the full list).
+     * Total count of overdue, expiring-today, and soon-to-expire policies,
+     * for a lightweight notification badge (see {@see self::expiringGroups()}
+     * for the full list).
      */
     public function expiringCount(): int
     {
@@ -118,6 +87,7 @@ final class InsuranceService
         $thresholds = config('insurance-bot.expiry_thresholds');
 
         return Insurance::query()->expired()->count()
+            + Insurance::query()->expiringOn(today())->count()
             + collect($thresholds)->sum(fn (int $days): int => Insurance::query()->expiringInDays($days)->count());
     }
 

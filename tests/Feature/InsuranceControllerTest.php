@@ -61,13 +61,9 @@ it('shows a policy full details', function () {
             ->where('insurance.insured_name', 'Test Garment Co., Ltd.'));
 });
 
-it('creates a policy and notifies the telegram chat', function () {
+it('creates a policy without notifying the telegram chat', function () {
     $this->mock(Api::class, function ($mock) {
-        $mock->shouldReceive('sendMessage')->once()
-            ->withArgs(fn (array $params) => $params['chat_id'] === $this->chatId
-                && str_contains($params['text'], 'Saved insurance policy')
-                && str_contains($params['text'], 'Y25TEST00099'))
-            ->andReturn(new Message([]));
+        $mock->shouldNotReceive('sendMessage');
     });
 
     authenticate($this->chatId, $this->botToken);
@@ -75,6 +71,7 @@ it('creates a policy and notifies the telegram chat', function () {
     $response = $this->post('/insurances', insuranceFormPayload());
 
     $response->assertRedirect('/insurances');
+    $response->assertSessionHas('status', 'Policy Y25TEST00099 saved.');
     expect(Insurance::where('policy_no', 'Y25TEST00099')->exists())->toBeTrue();
 });
 
@@ -101,64 +98,45 @@ it('updates a policy field via the edit form', function () {
     expect($insurance->fresh()->insurance_company)->toBe('Infinity');
 });
 
-it('deletes a policy and notifies the telegram chat', function () {
-    $insurance = Insurance::factory()->create();
-
-    $this->mock(Api::class, function ($mock) use ($insurance) {
-        $mock->shouldReceive('sendMessage')->once()
-            ->withArgs(fn (array $params) => $params['chat_id'] === $this->chatId
-                && str_contains($params['text'], "Deleted insurance policy {$insurance->policy_no}"))
-            ->andReturn(new Message([]));
-    });
+it('filters the list by expiry and search', function () {
+    Insurance::factory()->create(['expiry_date' => today(), 'policy_no' => 'Y25TEST00001']);
+    Insurance::factory()->create(['expiry_date' => today()->addDays(10), 'policy_no' => 'Y25TEST00002']);
+    Insurance::factory()->create(['expiry_date' => today()->addDays(90), 'policy_no' => 'Y25TEST00003']);
 
     authenticate($this->chatId, $this->botToken);
-
-    $this->delete("/insurances/{$insurance->id}")->assertRedirect('/insurances');
-
-    expect(Insurance::find($insurance->id))->toBeNull();
-});
-
-it('filters the list by the expiry tabs', function () {
-    $expired = Insurance::factory()->expired()->create();
-    $today = Insurance::factory()->create(['expiry_date' => today()]);
-    $in10 = Insurance::factory()->expiringInDays(10)->create();
-    $in20 = Insurance::factory()->expiringInDays(20)->create();
-    Insurance::factory()->create(['expiry_date' => today()->addDays(90)]);
-
-    authenticate($this->chatId, $this->botToken);
-
-    $this->get('/insurances?expiry=expired')
-        ->assertInertia(fn ($page) => $page
-            ->where('insurances.data.0.id', $expired->id)
-            ->where('insurances.total', 1));
-
-    $this->get('/insurances?expiry=not_expired')
-        ->assertInertia(fn ($page) => $page->where('insurances.total', 4));
 
     $this->get('/insurances?expiry=today')
         ->assertInertia(fn ($page) => $page
-            ->where('insurances.data.0.id', $today->id)
+            ->where('filters.expiry', 'today')
+            ->where('insurances.data.0.policy_no', 'Y25TEST00001')
             ->where('insurances.total', 1));
 
     $this->get('/insurances?expiry=10')
         ->assertInertia(fn ($page) => $page
-            ->where('insurances.data.0.id', $in10->id)
+            ->where('filters.expiry', '10')
+            ->where('insurances.data.0.policy_no', 'Y25TEST00002')
             ->where('insurances.total', 1));
 
-    $this->get('/insurances?expiry=20')
+    $this->get('/insurances?search=Y25TEST00003')
         ->assertInertia(fn ($page) => $page
-            ->where('insurances.data.0.id', $in20->id)
+            ->where('filters.search', 'Y25TEST00003')
             ->where('insurances.total', 1));
+});
 
-    $this->get('/insurances')
-        ->assertInertia(fn ($page) => $page
-            ->where('filters.date', today()->toDateString())
-            ->where('insurances.data.0.id', $today->id)
-            ->where('insurances.total', 1)
-            ->where('expiryThresholds', [10, 20, 30]));
+it('deletes a policy without notifying the telegram chat', function () {
+    $insurance = Insurance::factory()->create();
 
-    $this->get('/insurances?expiry=expired')
-        ->assertInertia(fn ($page) => $page->where('filters.date', null));
+    $this->mock(Api::class, function ($mock) {
+        $mock->shouldNotReceive('sendMessage');
+    });
+
+    authenticate($this->chatId, $this->botToken);
+
+    $response = $this->delete("/insurances/{$insurance->id}");
+
+    $response->assertRedirect('/insurances');
+    $response->assertSessionHas('status', "Policy {$insurance->policy_no} deleted.");
+    expect(Insurance::find($insurance->id))->toBeNull();
 });
 
 function insuranceFormPayload(array $overrides = []): array

@@ -1,12 +1,19 @@
 <script setup>
 import { computed } from 'vue';
-import { Link, router } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Icon from '@/Components/Icon.vue';
 import { INSURANCE_FIELDS } from '@/insuranceFields';
 
 const props = defineProps({
     insurance: { type: Object, required: true },
+});
+
+const page = usePage();
+const backHref = computed(() => {
+    const query = page.url.split('?')[1] ?? '';
+
+    return new URLSearchParams(query).get('from') === 'notifications' ? '/insurances-notifications' : '/insurances';
 });
 
 const sections = computed(() => {
@@ -77,7 +84,7 @@ const expiryInfo = computed(() => {
 </script>
 
 <template>
-    <AppLayout title="Policy Details" back-href="/insurances">
+    <AppLayout title="Policy Details" :back-href="backHref">
         <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm shadow-slate-200/60">
             <div class="flex items-start justify-between gap-2">
                 <p class="text-lg font-bold tracking-tight">{{ insurance.policy_no }}</p>

@@ -1,7 +1,8 @@
 <script setup>
 import { Link, router } from '@inertiajs/vue3';
+import { watchDebounced } from '@vueuse/core';
 import { computed, ref } from 'vue';
-import { ChevronLeft, ChevronRight, Plus, Search } from '@lucide/vue';
+import { ArrowDownNarrowWide, ArrowUpNarrowWide, Plus, Search, X } from '@lucide/vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Icon from '@/Components/Icon.vue';
 
@@ -12,14 +13,13 @@ const props = defineProps({
 });
 
 const search = ref(props.filters.search ?? '');
-const date = ref(props.filters.date ?? '');
 const expiry = ref(props.filters.expiry ?? '');
+const sort = ref(props.filters.sort ?? 'asc');
 const showSearch = ref(!!search.value);
 
 const expiryTabs = computed(() => [
     { value: '', label: 'All', icon: 'list', activeClass: 'bg-slate-900 shadow-slate-900/30' },
-    { value: 'not_expired', label: 'Not Expired', icon: 'check-circle', activeClass: 'bg-emerald-600 shadow-emerald-600/30' },
-    { value: 'expired', label: 'Expired', icon: 'alert-triangle', activeClass: 'bg-red-500 shadow-red-500/30' },
+    { value: 'today', label: 'Today', icon: 'alert-triangle', activeClass: 'bg-red-500 shadow-red-500/30' },
     ...props.expiryThresholds.map((days) => ({
         value: String(days),
         label: `${days} Days`,
@@ -28,86 +28,33 @@ const expiryTabs = computed(() => [
     })),
 ]);
 
-const today = new Date(new Date().toDateString());
-
-function toValue(d) {
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
-function startOfWeek(d) {
-    const monday = new Date(d);
-    const offset = (monday.getDay() + 6) % 7;
-    monday.setDate(monday.getDate() - offset);
-    return monday;
-}
-
-const weekStart = ref(startOfWeek(date.value ? new Date(`${date.value}T00:00:00`) : today));
-
-const weekDays = computed(() =>
-    Array.from({ length: 7 }, (_, i) => {
-        const d = new Date(weekStart.value);
-        d.setDate(weekStart.value.getDate() + i);
-        return d;
-    }),
-);
-
-const monthLabel = computed(() => weekStart.value.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }));
-
-function isSameDay(a, b) {
-    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
-
-function dayNumberClass(d) {
-    if (date.value && toValue(d) === date.value) {
-        return 'bg-brand-900 text-white shadow-sm shadow-brand-900/30';
-    }
-
-    if (isSameDay(d, today)) {
-        return 'font-bold text-brand-700 ring-1 ring-inset ring-brand-200';
-    }
-
-    return 'text-slate-700 active:bg-slate-100';
-}
-
-function prevWeek() {
-    const d = new Date(weekStart.value);
-    d.setDate(d.getDate() - 7);
-    weekStart.value = d;
-}
-
-function nextWeek() {
-    const d = new Date(weekStart.value);
-    d.setDate(d.getDate() + 7);
-    weekStart.value = d;
-}
-
 function applyFilters() {
     router.get(
         '/insurances',
         {
             search: search.value || undefined,
-            date: date.value || undefined,
             expiry: expiry.value || undefined,
+            sort: sort.value === 'desc' ? 'desc' : undefined,
         },
         { preserveState: true, replace: true },
     );
 }
 
-function pickDay(d) {
-    const value = toValue(d);
-    date.value = date.value === value ? '' : value;
-    expiry.value = '';
+function pickExpiry(value) {
+    expiry.value = expiry.value === value ? '' : value;
     applyFilters();
 }
 
-function pickExpiry(value) {
-    expiry.value = expiry.value === value ? '' : value;
-    date.value = '';
+function toggleSort() {
+    sort.value = sort.value === 'asc' ? 'desc' : 'asc';
     applyFilters();
 }
+
+function clearSearch() {
+    search.value = '';
+}
+
+watchDebounced(search, applyFilters, { debounce: 300 });
 
 function destroy(insurance) {
     if (!confirm(`Delete policy ${insurance.policy_no}? This action cannot be undone.`)) {
@@ -177,25 +124,7 @@ function statusBadgeClass(value) {
 <template>
     <AppLayout title="Insurance Policies">
         <div class="mb-3 flex items-center justify-between gap-2">
-            <div class="flex items-center gap-1">
-                <button
-                    type="button"
-                    class="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition-colors active:bg-slate-100"
-                    aria-label="Previous week"
-                    @click="prevWeek"
-                >
-                    <ChevronLeft class="h-4 w-4" />
-                </button>
-                <p class="text-sm font-semibold tracking-tight text-slate-700">{{ monthLabel }}</p>
-                <button
-                    type="button"
-                    class="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition-colors active:bg-slate-100"
-                    aria-label="Next week"
-                    @click="nextWeek"
-                >
-                    <ChevronRight class="h-4 w-4" />
-                </button>
-            </div>
+            <h1 class="text-lg font-semibold tracking-tight text-slate-900">Insurance Policies</h1>
 
             <div class="flex items-center gap-2">
                 <button
@@ -239,26 +168,20 @@ function statusBadgeClass(value) {
                         type="search"
                         autofocus
                         placeholder="Search policy no, insured name, company"
-                        class="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15"
-                        @change="applyFilters"
+                        class="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-10 pr-9 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15"
                     />
+                    <button
+                        v-if="search"
+                        type="button"
+                        aria-label="Clear search"
+                        class="absolute right-3 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 transition-colors active:bg-slate-100"
+                        @click="clearSearch"
+                    >
+                        <X class="h-3.5 w-3.5" />
+                    </button>
                 </div>
             </form>
         </Transition>
-
-        <div class="mb-3 -mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <div v-for="day in weekDays" :key="toValue(day)" class="flex shrink-0 flex-col items-center gap-1.5">
-                <span class="text-[11px] font-medium text-slate-400">{{ day.toLocaleDateString('en-US', { weekday: 'short' }) }}</span>
-                <button
-                    type="button"
-                    class="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-colors active:scale-95"
-                    :class="dayNumberClass(day)"
-                    @click="pickDay(day)"
-                >
-                    {{ day.getDate() }}
-                </button>
-            </div>
-        </div>
 
         <div class="mb-4 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button
@@ -278,9 +201,20 @@ function statusBadgeClass(value) {
             </button>
         </div>
 
-        <p class="mb-3 text-xs font-medium text-slate-400">
-            {{ insurances.total }} polic{{ insurances.total === 1 ? 'y' : 'ies' }} found
-        </p>
+        <div class="mb-3 flex items-center justify-between gap-2">
+            <p class="text-xs font-medium text-slate-400">
+                {{ insurances.total }} polic{{ insurances.total === 1 ? 'y' : 'ies' }} found
+            </p>
+
+            <button
+                type="button"
+                class="flex items-center gap-1 text-xs font-medium text-slate-500 transition-colors active:text-slate-700"
+                @click="toggleSort"
+            >
+                <component :is="sort === 'desc' ? ArrowDownNarrowWide : ArrowUpNarrowWide" class="h-3.5 w-3.5" />
+                {{ sort === 'desc' ? 'Latest first' : 'Soonest first' }}
+            </button>
+        </div>
 
         <div class="space-y-3">
             <div

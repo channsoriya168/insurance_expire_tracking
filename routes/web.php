@@ -5,6 +5,7 @@ use App\Http\Controllers\InsuranceFormController;
 use App\Http\Controllers\InsuranceNotificationController;
 use App\Http\Controllers\TelegramAuthController;
 use App\Http\Controllers\TelegramLaunchController;
+use App\Http\Controllers\ToggleInsuranceNotificationReadController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -16,6 +17,7 @@ Route::post('/telegram/auth', TelegramAuthController::class)->name('telegram.aut
 
 Route::middleware('telegram.chat')->group(function () {
     Route::get('insurances-notifications', InsuranceNotificationController::class)->name('insurances.notifications');
+    Route::patch('insurances-notifications/{insurance}/read', ToggleInsuranceNotificationReadController::class)->name('insurances.notifications.read');
     Route::resource('insurances', InsuranceController::class);
 });
 

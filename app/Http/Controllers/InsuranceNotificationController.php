@@ -18,6 +18,7 @@ final class InsuranceNotificationController extends Controller
 
         return Inertia::render('Insurances/Notifications', [
             'overdue' => $this->toArray($groups['overdue']),
+            'today' => $this->toArray($groups['today']),
             'buckets' => collect($groups['buckets'])
                 ->map(fn (Collection $policies): array => $this->toArray($policies))
                 ->all(),
@@ -38,6 +39,7 @@ final class InsuranceNotificationController extends Controller
                 'insured_name' => $insurance->insured_name,
                 'insurance_company' => $insurance->insurance_company,
                 'expiry_date' => $insurance->expiry_date->format('Y-m-d'),
+                'read' => $insurance->notification_read_at !== null,
             ])
             ->all();
     }
