@@ -2,7 +2,7 @@ import { createInertiaApp } from '@inertiajs/vue3';
 
 createInertiaApp();
 
-const webApp = window.Telegram?.WebApp;
+const webApp = typeof window !== 'undefined' ? window.Telegram?.WebApp : null;
 
 if (webApp) {
     webApp.ready();

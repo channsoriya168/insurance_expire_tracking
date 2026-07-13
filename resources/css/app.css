@@ -40,6 +40,18 @@
     --color-brand-950: #172554;
 }
 
+html {
+    color-scheme: light;
+}
+
+input[type='date'] {
+    min-width: 0;
+}
+
+input[type='date']::-webkit-date-and-time-value {
+    text-align: left;
+}
+
 body {
     background-color: var(--color-slate-50);
     color: var(--color-slate-900);

@@ -5,7 +5,7 @@ import BottomNav from '@/Components/BottomNav.vue';
 import Icon from '@/Components/Icon.vue';
 
 defineProps({
-    title: { type: String, default: 'បញ្ជីបណ្ណសន្យារ៉ាប់រង' },
+    title: { type: String, default: 'Insurance Policies' },
 });
 
 const page = usePage();
@@ -16,9 +16,6 @@ const flashStatus = computed(() => page.props.flash?.status);
     <div class="min-h-screen bg-slate-50 text-slate-900">
         <header class="sticky top-0 z-10 bg-brand-900 px-4 py-4 shadow-md shadow-brand-950/20">
             <div class="mx-auto flex max-w-2xl items-center gap-2.5">
-                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white">
-                    <Icon name="shield" class="h-5 w-5" />
-                </span>
                 <h1 class="truncate text-[17px] font-bold tracking-tight text-white">{{ title }}</h1>
             </div>
         </header>

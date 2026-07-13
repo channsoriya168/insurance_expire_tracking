@@ -52,7 +52,7 @@ it('creates a policy and notifies the telegram chat', function () {
     $this->mock(Api::class, function ($mock) {
         $mock->shouldReceive('sendMessage')->once()
             ->withArgs(fn (array $params) => $params['chat_id'] === $this->chatId
-                && str_contains($params['text'], 'បានរក្សាទុកបណ្ណសន្យារ៉ាប់រង')
+                && str_contains($params['text'], 'Saved insurance policy')
                 && str_contains($params['text'], 'Y25TEST00099'))
             ->andReturn(new Message([]));
     });
@@ -94,7 +94,7 @@ it('deletes a policy and notifies the telegram chat', function () {
     $this->mock(Api::class, function ($mock) use ($insurance) {
         $mock->shouldReceive('sendMessage')->once()
             ->withArgs(fn (array $params) => $params['chat_id'] === $this->chatId
-                && str_contains($params['text'], "បានលុបបណ្ណសន្យា {$insurance->policy_no}"))
+                && str_contains($params['text'], "Deleted insurance policy {$insurance->policy_no}"))
             ->andReturn(new Message([]));
     });
 

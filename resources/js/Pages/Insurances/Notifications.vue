@@ -10,12 +10,12 @@ const props = defineProps({
 });
 
 const sections = computed(() => [
-    { key: 'overdue', title: 'ផុតកំណត់រួចហើយ', policies: props.overdue, colorClass: 'text-red-500', accentClass: 'bg-red-500' },
+    { key: 'overdue', title: 'Already Expired', policies: props.overdue, colorClass: 'text-red-500', accentClass: 'bg-red-500' },
     ...Object.entries(props.buckets)
         .sort(([a], [b]) => Number(a) - Number(b))
         .map(([days, policies]) => ({
             key: `bucket-${days}`,
-            title: `ផុតកំណត់ក្នុងរយៈពេល ${days} ថ្ងៃ`,
+            title: `Expiring in ${days} Days`,
             policies,
             colorClass: Number(days) <= 10 ? 'text-red-500' : 'text-amber-500',
             accentClass: Number(days) <= 10 ? 'bg-red-500' : 'bg-amber-500',
@@ -26,7 +26,7 @@ const isEmpty = computed(() => sections.value.every((section) => section.policie
 </script>
 
 <template>
-    <AppLayout title="ជូនដំណឹង">
+    <AppLayout title="Notifications">
         <div class="space-y-6">
             <section v-for="section in sections" :key="section.key" v-show="section.policies.length > 0">
                 <h2 class="mb-2 flex items-center gap-1.5 text-sm font-semibold" :class="section.colorClass">
@@ -67,7 +67,7 @@ const isEmpty = computed(() => sections.value.every((section) => section.policie
                 class="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-slate-200 py-14 text-center"
             >
                 <Icon name="check-circle" class="h-8 w-8 text-emerald-500" />
-                <p class="text-sm text-slate-400">មិនមានបណ្ណសន្យារ៉ាប់រងជិតផុតកំណត់ទេ។</p>
+                <p class="text-sm text-slate-400">No policies are expiring soon.</p>
             </div>
         </div>
     </AppLayout>

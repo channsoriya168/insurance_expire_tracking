@@ -54,9 +54,9 @@ final class InsuranceController extends Controller
 
         $insurance = $this->insurances->create($data);
 
-        $this->notifyChat($request, "បានរក្សាទុកបណ្ណសន្យារ៉ាប់រង #{$insurance->id} ({$insurance->policy_no}) តាមរយៈ Mini App។");
+        $this->notifyChat($request, "Saved insurance policy #{$insurance->id} ({$insurance->policy_no}) via Mini App.");
 
-        return to_route('insurances.index')->with('status', "បានរក្សាទុកបណ្ណសន្យា {$insurance->policy_no}។");
+        return to_route('insurances.index')->with('status', "Policy {$insurance->policy_no} saved.");
     }
 
     public function edit(Insurance $insurance): Response
@@ -74,9 +74,9 @@ final class InsuranceController extends Controller
 
         $this->insurances->update($insurance, $data);
 
-        $this->notifyChat($request, "បានធ្វើបច្ចុប្បន្នភាពបណ្ណសន្យា {$insurance->policy_no} តាមរយៈ Mini App។");
+        $this->notifyChat($request, "Updated insurance policy {$insurance->policy_no} via Mini App.");
 
-        return to_route('insurances.index')->with('status', "បានធ្វើបច្ចុប្បន្នភាពបណ្ណសន្យា {$insurance->policy_no}។");
+        return to_route('insurances.index')->with('status', "Policy {$insurance->policy_no} updated.");
     }
 
     public function destroy(Request $request, Insurance $insurance): RedirectResponse
@@ -84,9 +84,9 @@ final class InsuranceController extends Controller
         $policyNo = $insurance->policy_no;
         $this->insurances->delete($insurance);
 
-        $this->notifyChat($request, "បានលុបបណ្ណសន្យា {$policyNo} តាមរយៈ Mini App។");
+        $this->notifyChat($request, "Deleted insurance policy {$policyNo} via Mini App.");
 
-        return to_route('insurances.index')->with('status', "បានលុបបណ្ណសន្យា {$policyNo}។");
+        return to_route('insurances.index')->with('status', "Policy {$policyNo} deleted.");
     }
 
     /**

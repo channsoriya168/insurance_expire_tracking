@@ -21,7 +21,7 @@ function applyFilters() {
 }
 
 function destroy(insurance) {
-    if (!confirm(`តើអ្នកចង់លុបបណ្ណសន្យារ៉ាប់រង ${insurance.policy_no} មែនទេ? សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។`)) {
+    if (!confirm(`Delete policy ${insurance.policy_no}? This action cannot be undone.`)) {
         return;
     }
 
@@ -37,19 +37,19 @@ function expiryInfo(dateString) {
 
     if (days < 0) {
         return {
-            label: `ផុតកំណត់ ${dateString} · ${Math.abs(days)} ថ្ងៃមុន`,
+            label: `Expired ${dateString} · ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} ago`,
             colorClass: 'text-red-500',
             accentClass: 'bg-red-500',
         };
     }
 
     if (days === 0) {
-        return { label: `ផុតកំណត់ថ្ងៃនេះ (${dateString})`, colorClass: 'text-red-500', accentClass: 'bg-red-500' };
+        return { label: `Expires today (${dateString})`, colorClass: 'text-red-500', accentClass: 'bg-red-500' };
     }
 
     if (days <= 10) {
         return {
-            label: `ផុតកំណត់ក្នុងរយៈពេល ${days} ថ្ងៃ · ${dateString}`,
+            label: `Expires in ${days} day${days === 1 ? '' : 's'} · ${dateString}`,
             colorClass: 'text-red-500',
             accentClass: 'bg-red-500',
         };
@@ -57,7 +57,7 @@ function expiryInfo(dateString) {
 
     if (days <= 30) {
         return {
-            label: `ផុតកំណត់ក្នុងរយៈពេល ${days} ថ្ងៃ · ${dateString}`,
+            label: `Expires in ${days} days · ${dateString}`,
             colorClass: 'text-amber-500',
             accentClass: 'bg-amber-500',
         };
@@ -68,13 +68,13 @@ function expiryInfo(dateString) {
 </script>
 
 <template>
-    <AppLayout title="បញ្ជីបណ្ណសន្យារ៉ាប់រង">
+    <AppLayout title="Insurance Policies">
         <Link
             href="/insurances/create"
             class="mb-4 flex items-center justify-center gap-1.5 rounded-full bg-brand-600 px-4 py-3.5 text-[15px] font-bold text-white shadow-md shadow-brand-600/25 transition-transform active:scale-[0.98]"
         >
             <Icon name="plus" class="h-5 w-5" />
-            បញ្ចូលបណ្ណសន្យារ៉ាប់រងថ្មី
+            Add New Policy
         </Link>
 
         <form class="mb-4 flex gap-2" @submit.prevent="applyFilters">
@@ -83,16 +83,16 @@ function expiryInfo(dateString) {
                 <input
                     v-model="search"
                     type="search"
-                    placeholder="ស្វែងរកលេខបណ្ណ, អ្នកត្រូវបានធានា, ក្រុមហ៊ុន"
+                    placeholder="Search policy no, insured name, company"
                     class="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15"
                 />
             </div>
-            <div class="relative w-24 shrink-0">
+            <div class="relative w-28 shrink-0">
                 <Icon name="filter" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                     v-model="status"
                     type="text"
-                    placeholder="ស្ថានភាព"
+                    placeholder="Status"
                     class="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-8 pr-2 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15"
                 />
             </div>
@@ -100,7 +100,7 @@ function expiryInfo(dateString) {
                 type="submit"
                 class="shrink-0 rounded-full bg-brand-50 px-4 py-2.5 text-sm font-semibold text-brand-700 transition-transform active:scale-95"
             >
-                ត្រង
+                Filter
             </button>
         </form>
 
@@ -136,7 +136,7 @@ function expiryInfo(dateString) {
                             class="flex items-center gap-1.5 rounded-full px-3 py-1.5 font-medium text-brand-700 transition-colors active:bg-brand-50"
                         >
                             <Icon name="edit" class="h-4 w-4" />
-                            កែសម្រួល
+                            Edit
                         </Link>
                         <button
                             type="button"
@@ -144,7 +144,7 @@ function expiryInfo(dateString) {
                             @click="destroy(insurance)"
                         >
                             <Icon name="trash" class="h-4 w-4" />
-                            លុប
+                            Delete
                         </button>
                     </div>
                 </div>
@@ -155,7 +155,7 @@ function expiryInfo(dateString) {
                 class="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-slate-200 py-14 text-center"
             >
                 <Icon name="inbox" class="h-8 w-8 text-slate-300" />
-                <p class="text-sm text-slate-400">រកមិនឃើញបណ្ណសន្យារ៉ាប់រងទេ។</p>
+                <p class="text-sm text-slate-400">No insurance policies found.</p>
             </div>
         </div>
 

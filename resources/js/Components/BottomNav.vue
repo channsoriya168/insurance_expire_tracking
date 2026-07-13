@@ -12,19 +12,19 @@ const tabs = [
     {
         href: '/insurances',
         icon: 'list',
-        label: 'បញ្ជី',
+        label: 'List',
         isActive: (current) => current === '/insurances' || /^\/insurances\/\d+\/edit$/.test(current),
     },
     {
         href: '/insurances/create',
         icon: 'plus',
-        label: 'បញ្ចូល',
+        label: 'Add',
         isActive: (current) => current === '/insurances/create',
     },
     {
         href: '/insurances-notifications',
         icon: 'bell',
-        label: 'ជូនដំណឹង',
+        label: 'Alerts',
         isActive: (current) => current === '/insurances-notifications',
         badge: true,
     },
