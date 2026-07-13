@@ -140,49 +140,52 @@ function toggleRead(policy) {
                     <div
                         v-for="policy in section.policies"
                         :key="policy.id"
-                        class="flex overflow-hidden rounded-2xl border bg-white transition-all"
+                        class="relative overflow-hidden rounded-2xl border bg-white transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/70"
                         :class="
                             policy.read
                                 ? 'border-slate-100 shadow-sm shadow-slate-200/40'
                                 : 'border-slate-200 shadow-md shadow-slate-200/70 ring-1 ring-inset ring-slate-100'
                         "
                     >
-                        <span class="w-1.5 shrink-0" :class="section.accentClass" />
+                        <span class="absolute inset-y-0 left-0 w-1" :class="section.accentClass" />
 
-                        <button
-                            type="button"
-                            class="flex shrink-0 items-center justify-center px-3 transition-transform active:scale-90"
-                            :aria-label="policy.read ? 'Mark as unread' : 'Mark as read'"
-                            :title="policy.read ? 'Mark as unread' : 'Mark as read'"
-                            @click="toggleRead(policy)"
-                        >
-                            <Icon v-if="policy.read" name="check-circle" class="h-5 w-5 text-emerald-400" />
-                            <span v-else class="h-2.5 w-2.5 rounded-full" :class="section.accentClass" />
-                        </button>
+                        <div class="flex items-center pl-5">
+                            <button
+                                type="button"
+                                class="flex h-11 w-11 shrink-0 items-center justify-center transition-transform active:scale-90"
+                                :aria-label="policy.read ? 'Mark as unread' : 'Mark as read'"
+                                :title="policy.read ? 'Mark as unread' : 'Mark as read'"
+                                @click="toggleRead(policy)"
+                            >
+                                <Icon v-if="policy.read" name="check-circle" class="h-5 w-5 text-emerald-400" />
+                                <span v-else class="h-2.5 w-2.5 rounded-full" :class="section.accentClass" />
+                            </button>
 
-                        <Link
-                            :href="`/insurances/${policy.id}?from=notifications`"
-                            class="flex min-w-0 flex-1 items-center gap-3 py-3.5 pr-2 transition-colors active:bg-slate-50"
-                            :class="policy.read ? 'opacity-60' : ''"
-                        >
-                            <div class="min-w-0 flex-1">
-                                <div class="flex items-start justify-between gap-2">
-                                    <p class="tracking-tight" :class="policy.read ? 'font-medium text-slate-600' : 'font-semibold text-slate-900'">
+                            <Link
+                                :href="`/insurances/${policy.id}?from=notifications`"
+                                class="flex min-w-0 flex-1 items-center gap-3 py-3.5 pr-3 transition-colors active:bg-slate-50"
+                                :class="policy.read ? 'opacity-60' : ''"
+                            >
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate tracking-tight" :class="policy.read ? 'font-medium text-slate-600' : 'font-semibold text-slate-900'">
                                         {{ policy.policy_no }}
                                     </p>
-                                    <span class="flex shrink-0 items-center gap-1 text-sm" :class="section.colorClass">
-                                        <Icon name="calendar" class="h-3.5 w-3.5" />
+                                    <p class="mt-0.5 flex items-center gap-1.5 truncate text-sm text-slate-500">
+                                        <Icon name="building" class="h-3.5 w-3.5 shrink-0" />
+                                        <span class="truncate">{{ policy.insurance_company }} · {{ policy.insured_name }}</span>
+                                    </p>
+                                    <div
+                                        class="mt-2 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold"
+                                        :class="section.badgeClass"
+                                    >
+                                        <Icon name="calendar" class="h-3.5 w-3.5 shrink-0" />
                                         {{ policy.expiry_date }}
-                                    </span>
+                                    </div>
                                 </div>
-                                <p class="mt-1 flex items-center gap-1.5 truncate text-sm text-slate-500">
-                                    <Icon name="building" class="h-3.5 w-3.5 shrink-0" />
-                                    <span class="truncate">{{ policy.insurance_company }} · {{ policy.insured_name }}</span>
-                                </p>
-                            </div>
 
-                            <Icon name="chevron-right" class="h-4 w-4 shrink-0 text-slate-300" />
-                        </Link>
+                                <Icon name="chevron-right" class="h-4 w-4 shrink-0 text-slate-300" />
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </section>

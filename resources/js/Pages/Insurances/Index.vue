@@ -66,40 +66,40 @@ function destroy(insurance) {
 
 function expiryInfo(dateString) {
     if (!dateString) {
-        return { label: '—', colorClass: 'text-slate-400', accentClass: 'bg-slate-200' };
+        return { label: '—', accentClass: 'bg-slate-200', chipClass: 'bg-slate-50 text-slate-400' };
     }
 
     const days = Math.ceil((new Date(`${dateString}T00:00:00`) - new Date(new Date().toDateString())) / 86400000);
 
     if (days < 0) {
         return {
-            label: `Expired ${dateString} · ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} ago`,
-            colorClass: 'text-red-500',
+            label: `Expired ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} ago · ${dateString}`,
             accentClass: 'bg-red-500',
+            chipClass: 'bg-red-50 text-red-600',
         };
     }
 
     if (days === 0) {
-        return { label: `Expires today (${dateString})`, colorClass: 'text-red-500', accentClass: 'bg-red-500' };
+        return { label: `Expires today · ${dateString}`, accentClass: 'bg-red-500', chipClass: 'bg-red-50 text-red-600' };
     }
 
     if (days <= 10) {
         return {
             label: `Expires in ${days} day${days === 1 ? '' : 's'} · ${dateString}`,
-            colorClass: 'text-red-500',
             accentClass: 'bg-red-500',
+            chipClass: 'bg-red-50 text-red-600',
         };
     }
 
     if (days <= 30) {
         return {
             label: `Expires in ${days} days · ${dateString}`,
-            colorClass: 'text-amber-500',
             accentClass: 'bg-amber-500',
+            chipClass: 'bg-amber-50 text-amber-600',
         };
     }
 
-    return { label: dateString, colorClass: 'text-slate-500', accentClass: 'bg-emerald-500' };
+    return { label: dateString, accentClass: 'bg-emerald-500', chipClass: 'bg-emerald-50 text-emerald-600' };
 }
 
 function statusBadgeClass(value) {
@@ -220,46 +220,49 @@ function statusBadgeClass(value) {
             <div
                 v-for="insurance in insurances.data"
                 :key="insurance.id"
-                class="flex overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm shadow-slate-200/60 transition-shadow hover:shadow-md hover:shadow-slate-200/70"
+                class="relative overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm shadow-slate-200/60 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/70"
             >
-                <span class="w-1.5 shrink-0" :class="expiryInfo(insurance.expiry_date).accentClass" />
+                <span class="absolute inset-y-0 left-0 w-1" :class="expiryInfo(insurance.expiry_date).accentClass" />
 
-                <div class="min-w-0 flex-1 p-4">
+                <div class="p-4 pl-5">
                     <div class="flex items-start justify-between gap-2">
-                        <p class="font-semibold tracking-tight">{{ insurance.policy_no }}</p>
+                        <p class="truncate text-base font-semibold tracking-tight text-slate-900">{{ insurance.policy_no }}</p>
                         <span class="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium" :class="statusBadgeClass(insurance.status)">
                             {{ insurance.status || 'Pending' }}
                         </span>
                     </div>
 
-                    <p class="mt-1.5 flex items-center gap-1.5 text-sm text-slate-500">
+                    <p class="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
                         <Icon name="building" class="h-4 w-4 shrink-0" />
                         <span class="truncate">{{ insurance.insurance_company }} · {{ insurance.insured_name }}</span>
                     </p>
 
-                    <p class="mt-2 flex items-center gap-1.5 text-sm font-medium" :class="expiryInfo(insurance.expiry_date).colorClass">
-                        <Icon name="calendar" class="h-4 w-4 shrink-0" />
+                    <div
+                        class="mt-3 flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold"
+                        :class="expiryInfo(insurance.expiry_date).chipClass"
+                    >
+                        <Icon name="calendar" class="h-3.5 w-3.5 shrink-0" />
                         {{ expiryInfo(insurance.expiry_date).label }}
-                    </p>
+                    </div>
 
-                    <div class="mt-3 flex justify-end gap-2 border-t border-slate-100 pt-3 text-sm">
+                    <div class="mt-3 grid grid-cols-3 gap-1.5 border-slate-100 text-sm">
                         <Link
                             :href="`/insurances/${insurance.id}`"
-                            class="flex items-center gap-1.5 rounded-full px-3 py-1.5 font-medium text-slate-600 transition-colors active:bg-slate-100"
+                            class="flex items-center justify-center gap-1.5 rounded-lg py-2 font-medium text-slate-600 transition-colors active:bg-slate-100"
                         >
                             <Icon name="eye" class="h-4 w-4" />
                             View
                         </Link>
                         <Link
                             :href="`/insurances/${insurance.id}/edit`"
-                            class="flex items-center gap-1.5 rounded-full px-3 py-1.5 font-medium text-brand-700 transition-colors active:bg-brand-50"
+                            class="flex items-center justify-center gap-1.5 rounded-lg py-2 font-medium text-brand-700 transition-colors active:bg-brand-50"
                         >
                             <Icon name="edit" class="h-4 w-4" />
                             Edit
                         </Link>
                         <button
                             type="button"
-                            class="flex items-center gap-1.5 rounded-full px-3 py-1.5 font-medium text-red-500 transition-colors active:bg-red-50"
+                            class="flex items-center justify-center gap-1.5 rounded-lg py-2 font-medium text-red-500 transition-colors active:bg-red-50"
                             @click="destroy(insurance)"
                         >
                             <Icon name="trash" class="h-4 w-4" />
