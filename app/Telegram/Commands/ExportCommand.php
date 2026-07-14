@@ -22,7 +22,7 @@ final class ExportCommand extends Command
         $filter = $filter !== null && trim($filter) !== '' ? trim($filter) : null;
 
         $this->replyWithMessage([
-            'text' => 'Tap below to export the list of insurance policies. This link will expire in 30 minutes.',
+            'text' => 'Tap below to export the list of insurance policies. This link will expire in 24 hours.',
             'reply_markup' => json_encode([
                 'inline_keyboard' => [[['text' => 'Open export form', 'web_app' => ['url' => FormLinks::export($chatId, $filter)]]]],
             ]),

@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\URL;
 
 final class FormLinks
 {
-    private const int EXPIRES_IN_MINUTES = 30;
+    private const int EXPIRES_IN_MINUTES = 60 * 24;
 
     public static function launch(?string $redirect = null): string
     {

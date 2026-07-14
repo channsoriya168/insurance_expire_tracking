@@ -11,18 +11,18 @@ final class StartCommand extends Command
 
     protected array $aliases = ['menu'];
 
-    protected string $description = 'Show the main menu.';
+    protected string $description = 'Show the welcome message.';
 
     public function handle(): void
     {
         $chatId = (int) $this->getUpdate()->getChat()->get('id');
 
         $this->replyWithMessage([
-            'text' => 'Welcome to Insurance Bot. Please choose an action below.',
+            'text' => 'Welcome to Insurance Bot.',
             'reply_markup' => json_encode([
-                'inline_keyboard' => [
-                    [['text' => '📤 Export insurance policies', 'web_app' => ['url' => FormLinks::export($chatId)]]],
-                ],
+                'keyboard' => [[['text' => '📤 Export', 'web_app' => ['url' => FormLinks::export($chatId)]]]],
+                'resize_keyboard' => true,
+                'is_persistent' => true,
             ]),
         ]);
     }
