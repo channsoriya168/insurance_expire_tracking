@@ -7,6 +7,7 @@ import { INSURANCE_FIELDS } from '@/insuranceFields';
 const props = defineProps({
     insurance: { type: Object, required: true },
     contactMethods: { type: Array, required: true },
+    statuses: { type: Array, required: true },
 });
 
 const form = useForm(
@@ -23,6 +24,7 @@ function submit() {
         <InsuranceForm
             :form="form"
             :contact-methods="contactMethods"
+            :statuses="statuses"
             mode="edit"
             submit-label="Update Policy"
             @submit="submit"

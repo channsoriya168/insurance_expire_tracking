@@ -16,7 +16,7 @@ export const INSURANCE_FIELDS = [
 
     { key: 'expiry_date', label: 'Expiry Date', type: 'date', required: true, section: 'Dates & Status' },
     { key: 'confirmed_date', label: 'Confirmed Date', type: 'date', required: false, section: 'Dates & Status', advanced: true },
-    { key: 'status', label: 'Status', type: 'text', required: false, section: 'Dates & Status', placeholder: 'Pending', advanced: true, hideOnCreate: true },
+    { key: 'status', label: 'Status', type: 'select', required: false, section: 'Dates & Status', advanced: true, hideOnCreate: true },
     { key: 'request_policy_date', label: 'Policy Request Date', type: 'date', required: false, section: 'Dates & Status', advanced: true },
     { key: 'policy_received_date', label: 'Policy Received Date', type: 'date', required: false, section: 'Dates & Status', advanced: true },
 

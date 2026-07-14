@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\ContactMethod;
+use App\Enums\PolicyStatus;
 use Carbon\CarbonInterface;
 use Database\Factories\InsuranceFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -42,6 +44,7 @@ class Insurance extends Model
     protected function casts(): array
     {
         return [
+            'contact_method' => ContactMethod::class,
             'expiry_date' => 'date',
             'confirmed_date' => 'date',
             'request_policy_date' => 'date',
@@ -51,6 +54,7 @@ class Insurance extends Model
             'revised_sum_insured' => 'decimal:2',
             'revised_premium' => 'decimal:2',
             'revised_premium_rate' => 'decimal:4',
+            'status' => PolicyStatus::class,
         ];
     }
 
