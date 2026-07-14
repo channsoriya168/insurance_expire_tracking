@@ -1,6 +1,5 @@
 <?php
 
-use App\Telegram\Commands\ExportCommand;
 use App\Telegram\Commands\StartCommand;
 use Telegram\Bot\Commands\HelpCommand;
 
@@ -43,7 +42,6 @@ return [
             'allowed_updates' => null,
             'commands' => [
                 StartCommand::class,
-                ExportCommand::class,
             ],
         ],
 
