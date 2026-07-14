@@ -87,6 +87,7 @@ final class InsuranceController extends Controller
     {
         return Inertia::render('Insurances/Create', [
             'contactMethods' => PolicyFieldSteps::contactMethods(),
+            'statuses' => PolicyFieldSteps::statuses(),
         ]);
     }
 
@@ -105,6 +106,7 @@ final class InsuranceController extends Controller
         return Inertia::render('Insurances/Edit', [
             'insurance' => $this->toFormArray($insurance),
             'contactMethods' => PolicyFieldSteps::contactMethods(),
+            'statuses' => PolicyFieldSteps::statuses(),
         ]);
     }
 

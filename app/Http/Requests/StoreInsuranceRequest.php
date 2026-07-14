@@ -34,7 +34,7 @@ class StoreInsuranceRequest extends FormRequest
             'revised_premium' => ['nullable', 'numeric', 'min:0'],
             'revised_premium_rate' => ['nullable', 'numeric', 'min:0'],
             'confirmed_date' => ['nullable', 'date'],
-            'status' => ['nullable', 'string', 'max:255'],
+            'status' => ['nullable', Rule::in(PolicyFieldSteps::statuses())],
             'request_policy_date' => ['nullable', 'date'],
             'policy_received_date' => ['nullable', 'date'],
             'remarks' => ['nullable', 'string'],

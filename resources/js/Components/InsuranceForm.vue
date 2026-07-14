@@ -10,9 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 const props = defineProps({
     form: { type: Object, required: true },
     contactMethods: { type: Array, required: true },
+    statuses: { type: Array, required: true },
     submitLabel: { type: String, default: 'Save' },
     mode: { type: String, default: 'create' },
 });
+
+function selectOptions(field) {
+    return field.key === 'status' ? props.statuses : props.contactMethods;
+}
 
 const emit = defineEmits(['submit']);
 
@@ -65,8 +70,8 @@ function inputClass(field) {
                             <SelectValue :placeholder="`Select ${field.label.toLowerCase()}`" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem v-for="method in contactMethods" :key="method" :value="method">
-                                {{ method }}
+                            <SelectItem v-for="option in selectOptions(field)" :key="option" :value="option">
+                                {{ option }}
                             </SelectItem>
                         </SelectContent>
                     </Select>
@@ -110,7 +115,19 @@ function inputClass(field) {
                             {{ field.label }}
                         </Label>
 
+                        <Select v-if="field.type === 'select'" v-model="form[field.key]">
+                            <SelectTrigger :id="field.key" :class="fieldClass">
+                                <SelectValue :placeholder="`Select ${field.label.toLowerCase()}`" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem v-for="option in selectOptions(field)" :key="option" :value="option">
+                                    {{ option }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+
                         <Input
+                            v-else
                             :id="field.key"
                             v-model="form[field.key]"
                             :type="field.type"

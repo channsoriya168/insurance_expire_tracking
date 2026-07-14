@@ -6,6 +6,7 @@ import { INSURANCE_FIELDS } from '@/insuranceFields';
 
 defineProps({
     contactMethods: { type: Array, required: true },
+    statuses: { type: Array, required: true },
 });
 
 const form = useForm(Object.fromEntries(INSURANCE_FIELDS.map((field) => [field.key, ''])));
@@ -20,6 +21,7 @@ function submit() {
         <InsuranceForm
             :form="form"
             :contact-methods="contactMethods"
+            :statuses="statuses"
             mode="create"
             submit-label="Save Policy"
             @submit="submit"

@@ -2,6 +2,9 @@
 
 namespace App\Telegram\Conversations;
 
+use App\Enums\ContactMethod;
+use App\Enums\PolicyStatus;
+
 /**
  * Declarative catalogue of the 18 Insurance fields, shared by the form
  * controller and form request so field order and contact methods aren't
@@ -34,15 +37,18 @@ final class PolicyFieldSteps
     ];
 
     /**
-     * @var list<string>
-     */
-    private const array CONTACT_METHODS = ['Email', 'WhatsApp', 'WeChat', 'Telegram'];
-
-    /**
      * @return list<string>
      */
     public static function contactMethods(): array
     {
-        return self::CONTACT_METHODS;
+        return ContactMethod::values();
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function statuses(): array
+    {
+        return PolicyStatus::values();
     }
 }
