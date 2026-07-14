@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('insured_name');
             $table->date('expiry_date');
             $table->string('policy_type');
-            $table->decimal('sum_insured', 14, 2);
+            $table->decimal('sum_insured', 14, 2)->nullable();
             $table->decimal('premium', 14, 2);
             $table->decimal('revised_sum_insured', 14, 2)->nullable();
             $table->decimal('revised_premium', 14, 2)->nullable();

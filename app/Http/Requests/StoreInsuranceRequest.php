@@ -28,7 +28,7 @@ class StoreInsuranceRequest extends FormRequest
             'insured_name' => ['required', 'string', 'max:255'],
             'expiry_date' => ['required', 'date'],
             'policy_type' => ['required', 'string', 'max:255'],
-            'sum_insured' => ['required', 'numeric', 'min:0'],
+            'sum_insured' => ['nullable', 'numeric', 'min:0'],
             'premium' => ['required', 'numeric', 'min:0'],
             'revised_sum_insured' => ['nullable', 'numeric', 'min:0'],
             'revised_premium' => ['nullable', 'numeric', 'min:0'],

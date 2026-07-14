@@ -8,7 +8,7 @@ export const INSURANCE_FIELDS = [
     { key: 'contact_value', label: 'Contact Details', type: 'text', required: true, section: 'Contact Information', placeholder: 'Phone number, email, or username' },
     { key: 'contact_person', label: 'Contact Person', type: 'text', required: false, section: 'Contact Information', placeholder: 'Who to reach out to' },
 
-    { key: 'sum_insured', label: 'Sum Insured', type: 'number', required: true, section: 'Financial Details', placeholder: '0.00' },
+    { key: 'sum_insured', label: 'Sum Insured', type: 'number', required: false, section: 'Financial Details', placeholder: '0.00' },
     { key: 'premium', label: 'Premium', type: 'number', required: true, section: 'Financial Details', placeholder: '0.00' },
     { key: 'revised_sum_insured', label: 'Revised Sum Insured', type: 'number', required: false, section: 'Financial Details', placeholder: '0.00', advanced: true },
     { key: 'revised_premium', label: 'Revised Premium', type: 'number', required: false, section: 'Financial Details', placeholder: '0.00', advanced: true },

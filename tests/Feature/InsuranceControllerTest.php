@@ -97,6 +97,16 @@ it('creates a policy without notifying the telegram chat', function () {
     expect(Insurance::where('policy_no', 'Y25TEST00099')->exists())->toBeTrue();
 });
 
+it('creates a policy without a sum insured', function () {
+    authenticate($this->chatId, $this->botToken);
+
+    $response = $this->post('/insurances', insuranceFormPayload(['sum_insured' => '']));
+
+    $response->assertRedirect('/insurances');
+    $response->assertSessionDoesntHaveErrors();
+    expect(Insurance::where('policy_no', 'Y25TEST00099')->first()->sum_insured)->toBeNull();
+});
+
 it('rejects invalid input without creating a policy', function () {
     authenticate($this->chatId, $this->botToken);
 
