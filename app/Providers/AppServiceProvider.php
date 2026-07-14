@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Insurance;
+use App\Observers\InsuranceObserver;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -28,5 +30,7 @@ class AppServiceProvider extends ServiceProvider
         if (str_starts_with((string) config('app.url'), 'https://')) {
             URL::forceScheme('https');
         }
+
+        Insurance::observe(InsuranceObserver::class);
     }
 }

@@ -61,6 +61,28 @@ it('shows a policy full details', function () {
             ->where('insurance.insured_name', 'Test Garment Co., Ltd.'));
 });
 
+it('marks the notification read when viewing details from the notifications list', function () {
+    $insurance = Insurance::factory()->expiringInDays(10)->create();
+
+    authenticate($this->chatId, $this->botToken);
+
+    expect($insurance->notification->read_at)->toBeNull();
+
+    $this->get("/insurances/{$insurance->id}?from=notifications")->assertOk();
+
+    expect($insurance->notification->fresh()->read_at)->not->toBeNull();
+});
+
+it('does not mark the notification read when viewing details from elsewhere', function () {
+    $insurance = Insurance::factory()->expiringInDays(10)->create();
+
+    authenticate($this->chatId, $this->botToken);
+
+    $this->get("/insurances/{$insurance->id}")->assertOk();
+
+    expect($insurance->notification->fresh()->read_at)->toBeNull();
+});
+
 it('creates a policy without notifying the telegram chat', function () {
     $this->mock(Api::class, function ($mock) {
         $mock->shouldNotReceive('sendMessage');
@@ -120,6 +142,36 @@ it('filters the list by expiry and search', function () {
     $this->get('/insurances?search=Y25TEST00003')
         ->assertInertia(fn ($page) => $page
             ->where('filters.search', 'Y25TEST00003')
+            ->where('insurances.total', 1));
+});
+
+it('filters the list by expiry ranges and expired policies', function () {
+    Insurance::factory()->create(['expiry_date' => today()->subDay(), 'policy_no' => 'Y25TEST00001']);
+    Insurance::factory()->create(['expiry_date' => today()->addDays(5), 'policy_no' => 'Y25TEST00002']);
+    Insurance::factory()->create(['expiry_date' => today()->addDays(15), 'policy_no' => 'Y25TEST00003']);
+    Insurance::factory()->create(['expiry_date' => today()->addDays(25), 'policy_no' => 'Y25TEST00004']);
+
+    authenticate($this->chatId, $this->botToken);
+
+    $this->get('/insurances?expiry=expired')
+        ->assertInertia(fn ($page) => $page
+            ->where('filters.expiry', 'expired')
+            ->where('insurances.data.0.policy_no', 'Y25TEST00001')
+            ->where('insurances.total', 1));
+
+    $this->get('/insurances?expiry=10')
+        ->assertInertia(fn ($page) => $page
+            ->where('insurances.data.0.policy_no', 'Y25TEST00002')
+            ->where('insurances.total', 1));
+
+    $this->get('/insurances?expiry=20')
+        ->assertInertia(fn ($page) => $page
+            ->where('insurances.data.0.policy_no', 'Y25TEST00003')
+            ->where('insurances.total', 1));
+
+    $this->get('/insurances?expiry=30')
+        ->assertInertia(fn ($page) => $page
+            ->where('insurances.data.0.policy_no', 'Y25TEST00004')
             ->where('insurances.total', 1));
 });
 

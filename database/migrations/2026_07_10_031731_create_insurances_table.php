@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('policy_no')->unique();
             $table->string('contact_method');
             $table->string('contact_value');
-            $table->string('contact_person');
+            $table->string('contact_person')->nullable();
             $table->string('insured_name');
             $table->date('expiry_date');
             $table->string('policy_type');

@@ -2,7 +2,7 @@
 
 namespace App\Http\Middleware;
 
-use App\Services\InsuranceService;
+use App\Services\InsuranceNotificationService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -42,7 +42,7 @@ class HandleInertiaRequests extends Middleware
                 'status' => fn () => $request->session()->get('status'),
             ],
             'expiringCount' => fn () => $request->session()->has('telegram_chat_id')
-                ? app(InsuranceService::class)->expiringCount()
+                ? app(InsuranceNotificationService::class)->unreadCount()
                 : 0,
         ];
     }

@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreInsuranceRequest;
 use App\Http\Requests\UpdateInsuranceRequest;
 use App\Models\Insurance;
+use App\Services\InsuranceNotificationService;
 use App\Services\InsuranceService;
 use App\Telegram\Conversations\PolicyFieldSteps;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,7 +19,10 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 final class InsuranceController extends Controller
 {
-    public function __construct(private readonly InsuranceService $insurances) {}
+    public function __construct(
+        private readonly InsuranceService $insurances,
+        private readonly InsuranceNotificationService $notifications,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -41,11 +46,10 @@ final class InsuranceController extends Controller
                     $thresholds = config('insurance-bot.expiry_thresholds');
 
                     match (true) {
-                        $value === 'expired' => $query->whereDate('expiry_date', '<', today()),
-                        $value === 'today' => $query->whereDate('expiry_date', today()),
-                        ctype_digit($value) && in_array((int) $value, $thresholds, true) => $query->whereBetween(
-                            'expiry_date',
-                            $this->expiryRange((int) $value, $thresholds),
+                        $value === 'expired' => $query->expired(),
+                        $value === 'today' => $query->expiringOn(today()),
+                        ctype_digit($value) && in_array((int) $value, $thresholds, true) => $query->expiringBetween(
+                            ...$this->expiryRange((int) $value, $thresholds),
                         ),
                         default => null,
                     };
@@ -76,8 +80,12 @@ final class InsuranceController extends Controller
         ]);
     }
 
-    public function show(Insurance $insurance): Response
+    public function show(Request $request, Insurance $insurance): Response
     {
+        if ($request->query('from') === 'notifications') {
+            $this->notifications->markRead($insurance);
+        }
+
         return Inertia::render('Insurances/Show', [
             'insurance' => $this->toFormArray($insurance),
         ]);
@@ -130,17 +138,14 @@ final class InsuranceController extends Controller
 
     /**
      * @param  array<int, int>  $thresholds
-     * @return array{0: string, 1: string}
+     * @return array{0: CarbonInterface, 1: CarbonInterface}
      */
     private function expiryRange(int $days, array $thresholds): array
     {
         $index = array_search($days, $thresholds, true);
         $lowerDays = $index > 0 ? $thresholds[$index - 1] + 1 : 1;
 
-        return [
-            today()->addDays($lowerDays)->toDateString(),
-            today()->addDays($days)->toDateString(),
-        ];
+        return [today()->addDays($lowerDays), today()->addDays($days)];
     }
 
     /**

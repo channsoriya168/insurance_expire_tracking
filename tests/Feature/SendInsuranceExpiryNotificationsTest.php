@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Insurance;
+use App\Models\InsuranceNotification;
 use Telegram\Bot\Api;
 
 it('sends a summary to every allowed chat id', function () {
@@ -36,6 +37,19 @@ it('sends a summary to every allowed chat id', function () {
     $this->artisan('insurance:notify-expiring')->assertExitCode(0);
 });
 
+it('does not send a second Telegram summary if run again the same day', function () {
+    config(['insurance-bot.allowed_chat_ids' => [111]]);
+
+    Insurance::factory()->create(['expiry_date' => today()]);
+
+    $this->mock(Api::class, function ($mock) {
+        $mock->shouldReceive('sendMessage')->once();
+    });
+
+    $this->artisan('insurance:notify-expiring')->assertExitCode(0);
+    $this->artisan('insurance:notify-expiring')->assertExitCode(0);
+});
+
 it('sends nothing when no policies are expiring soon', function () {
     config(['insurance-bot.allowed_chat_ids' => [111]]);
 
@@ -47,4 +61,32 @@ it('sends nothing when no policies are expiring soon', function () {
     });
 
     $this->artisan('insurance:notify-expiring')->assertExitCode(0);
+});
+
+it('corrects a notification row that drifted out of date without a save', function () {
+    // Simulate pure day-count aging: the policy is now only 8 days out, but
+    // its notification row is stuck reflecting an older, wider bucket - the
+    // kind of drift a save/update would fix instantly via the observer, but
+    // that only this scheduled command catches for otherwise-untouched policies.
+    $insurance = Insurance::factory()->create(['expiry_date' => today()->addDays(8)]);
+    $insurance->notification->update(['bucket' => '20', 'read_at' => now()]);
+
+    $this->artisan('insurance:notify-expiring')->assertExitCode(0);
+
+    expect($insurance->notification->fresh())
+        ->bucket->toBe('10')
+        ->read_at->toBeNull();
+});
+
+it('removes notification rows for policies that have aged out of every window', function () {
+    $insurance = Insurance::factory()->create(['expiry_date' => today()->addDays(15)]);
+    $notificationId = $insurance->notification->id;
+
+    // Simulate the policy having aged past every threshold without a save.
+    $insurance->notification->update(['bucket' => '30']);
+    $insurance->newQuery()->where('id', $insurance->id)->update(['expiry_date' => today()->addDays(90)]);
+
+    $this->artisan('insurance:notify-expiring')->assertExitCode(0);
+
+    expect(InsuranceNotification::query()->find($notificationId))->toBeNull();
 });
