@@ -55,6 +55,18 @@ it('only includes policies within the requested expiry range', function () {
     expect($query->pluck('id')->all())->toBe([$inRange->id]);
 });
 
+it('only includes policies on the requested single day', function () {
+    $insurances = app(InsuranceService::class);
+
+    $inRange = Insurance::factory()->create(['expiry_date' => '2026-03-15']);
+    Insurance::factory()->create(['expiry_date' => '2026-03-16']);
+
+    $range = ExpiryDateRange::parse('2026-03-15');
+    $query = $insurances->exportQuery($range);
+
+    expect($query->pluck('id')->all())->toBe([$inRange->id]);
+});
+
 it('includes every policy when the filter is "all"', function () {
     $insurances = app(InsuranceService::class);
 

@@ -16,7 +16,7 @@ final readonly class ExpiryDateRange
      * Parse a user-supplied filter string into a date range.
      *
      * Accepts: "" or "all" (no filter), "YYYY-MM" (a whole month),
-     * or "YYYY-MM-DD..YYYY-MM-DD" (an explicit range).
+     * "YYYY-MM-DD" (a single day), or "YYYY-MM-DD..YYYY-MM-DD" (an explicit range).
      */
     public static function parse(string $input): self
     {
@@ -39,8 +39,14 @@ final readonly class ExpiryDateRange
             );
         }
 
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $input) === 1) {
+            $day = CarbonImmutable::parse($input);
+
+            return new self($day->startOfDay(), $day->endOfDay());
+        }
+
         throw new InvalidArgumentException(
-            "Unrecognized filter \"{$input}\". Use \"all\", \"YYYY-MM\", or \"YYYY-MM-DD..YYYY-MM-DD\"."
+            "Unrecognized filter \"{$input}\". Use \"all\", \"YYYY-MM\", \"YYYY-MM-DD\", or \"YYYY-MM-DD..YYYY-MM-DD\"."
         );
     }
 

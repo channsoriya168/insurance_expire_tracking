@@ -30,7 +30,7 @@
         label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
         .hint { color: #9ca3af; font-size: 0.78rem; margin-top: 2px; }
         .field-error { color: #dc2626; font-size: 0.78rem; margin-top: 2px; }
-        input[type=text], input[type=number], input[type=date], select, textarea {
+        input[type=text], input[type=number], input[type=date], input[type=month], select, textarea {
             width: 100%;
             padding: 9px 10px;
             border: 1px solid #d1d5db;
