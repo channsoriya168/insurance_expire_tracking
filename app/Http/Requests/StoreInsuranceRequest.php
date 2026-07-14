@@ -20,14 +20,14 @@ class StoreInsuranceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'insurance_company' => ['required', 'string', 'max:255'],
-            'policy_no' => ['required', 'string', 'max:255', Rule::unique('insurances', 'policy_no')],
-            'contact_method' => ['required', Rule::in(PolicyFieldSteps::contactMethods())],
-            'contact_value' => ['required', 'string', 'max:255'],
+            'insurance_company' => ['nullable', 'string', 'max:255'],
+            'policy_no' => ['nullable', 'string', 'max:255', Rule::unique('insurances', 'policy_no')],
+            'contact_method' => ['nullable', Rule::in(PolicyFieldSteps::contactMethods())],
+            'contact_value' => ['nullable', 'string', 'max:255'],
             'contact_person' => ['nullable', 'string', 'max:255'],
-            'insured_name' => ['required', 'string', 'max:255'],
-            'expiry_date' => ['required', 'date'],
-            'policy_type' => ['required', 'string', 'max:255'],
+            'insured_name' => ['nullable', 'string', 'max:255'],
+            'expiry_date' => ['nullable', 'date'],
+            'policy_type' => ['nullable', 'string', 'max:255'],
             'sum_insured' => ['nullable', 'numeric', 'min:0'],
             'premium' => ['required', 'numeric', 'min:0'],
             'revised_sum_insured' => ['nullable', 'numeric', 'min:0'],
