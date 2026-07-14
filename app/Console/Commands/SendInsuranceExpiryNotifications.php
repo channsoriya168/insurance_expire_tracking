@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Insurance;
+use App\Services\InsuranceNotificationService;
 use App\Services\InsuranceService;
 use App\Telegram\AllowedChats;
 use App\Telegram\FormLinks;
@@ -13,14 +14,19 @@ use Illuminate\Support\Collection;
 use Telegram\Bot\Api;
 
 #[Signature('insurance:notify-expiring')]
-#[Description('Send a Telegram summary of soon-to-expire insurance policies.')]
+#[Description('Send a Telegram summary of soon-to-expire insurance policies and refresh the in-app notification list.')]
 class SendInsuranceExpiryNotifications extends Command
 {
     /**
      * Execute the console command.
      */
-    public function handle(InsuranceService $insurances, Api $telegram): int
+    public function handle(InsuranceService $insurances, InsuranceNotificationService $notifications, Api $telegram): int
     {
+        // Runs unconditionally (even if nothing is Telegram-worthy below) since
+        // overdue policies persist in the in-app list but are deliberately
+        // excluded from the Telegram summary to avoid daily re-announcing them.
+        $notifications->syncAllNotifications();
+
         $groups = $insurances->expiringGroups();
 
         if ($this->isEmpty($groups)) {

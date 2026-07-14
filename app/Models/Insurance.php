@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
     'insurance_company',
@@ -45,7 +46,6 @@ class Insurance extends Model
             'confirmed_date' => 'date',
             'request_policy_date' => 'date',
             'policy_received_date' => 'date',
-            'notification_read_at' => 'datetime',
             'sum_insured' => 'decimal:2',
             'premium' => 'decimal:2',
             'revised_sum_insured' => 'decimal:2',
@@ -83,5 +83,13 @@ class Insurance extends Model
     protected function forMonth(Builder $query, int $year, int $month): void
     {
         $query->whereYear('expiry_date', $year)->whereMonth('expiry_date', $month);
+    }
+
+    /**
+     * @return HasOne<InsuranceNotification, $this>
+     */
+    public function notification(): HasOne
+    {
+        return $this->hasOne(InsuranceNotification::class);
     }
 }
