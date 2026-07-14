@@ -23,12 +23,12 @@ final class InsuranceController extends Controller
     {
         $search = $request->string('search')->trim()->value() ?: null;
         $expiry = $request->string('expiry')->trim()->value() ?: null;
-        $sort = $request->string('sort')->trim()->value() === 'desc' ? 'desc' : 'asc';
+        $sort = $request->string('sort')->trim()->value() === 'asc' ? 'asc' : 'desc';
 
         $filters = array_filter(['search' => $search, 'expiry' => $expiry]);
 
         $insurances = QueryBuilder::for(Insurance::class, new Request(['filter' => $filters]))
-            ->select(['id', 'policy_no', 'insurance_company', 'insured_name', 'policy_type', 'status', 'expiry_date'])
+            ->select(['id', 'policy_no', 'insurance_company', 'insured_name', 'policy_type', 'status', 'expiry_date', 'created_at'])
             ->allowedFilters(
                 AllowedFilter::callback('search', function (Builder $query, string $value): void {
                     $query->where(function (Builder $query) use ($value): void {
@@ -38,14 +38,20 @@ final class InsuranceController extends Controller
                     });
                 }),
                 AllowedFilter::callback('expiry', function (Builder $query, string $value): void {
+                    $thresholds = config('insurance-bot.expiry_thresholds');
+
                     match (true) {
+                        $value === 'expired' => $query->whereDate('expiry_date', '<', today()),
                         $value === 'today' => $query->whereDate('expiry_date', today()),
-                        ctype_digit($value) => $query->whereDate('expiry_date', today()->addDays((int) $value)->toDateString()),
+                        ctype_digit($value) && in_array((int) $value, $thresholds, true) => $query->whereBetween(
+                            'expiry_date',
+                            $this->expiryRange((int) $value, $thresholds),
+                        ),
                         default => null,
                     };
                 }),
             )
-            ->orderBy('expiry_date', $sort)
+            ->orderBy('created_at', $sort)
             ->paginate(15)
             ->withQueryString();
 
@@ -118,6 +124,21 @@ final class InsuranceController extends Controller
         $this->insurances->delete($insurance);
 
         return to_route('insurances.index')->with('status', "Policy {$policyNo} deleted.");
+    }
+
+    /**
+     * @param  array<int, int>  $thresholds
+     * @return array{0: string, 1: string}
+     */
+    private function expiryRange(int $days, array $thresholds): array
+    {
+        $index = array_search($days, $thresholds, true);
+        $lowerDays = $index > 0 ? $thresholds[$index - 1] + 1 : 1;
+
+        return [
+            today()->addDays($lowerDays)->toDateString(),
+            today()->addDays($days)->toDateString(),
+        ];
     }
 
     /**

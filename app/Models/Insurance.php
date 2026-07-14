@@ -75,7 +75,8 @@ class Insurance extends Model
     #[Scope]
     protected function expiringBetween(Builder $query, CarbonInterface $start, CarbonInterface $end): void
     {
-        $query->whereBetween('expiry_date', [$start->toDateString(), $end->toDateString()]);
+        $query->whereDate('expiry_date', '>=', $start->toDateString())
+            ->whereDate('expiry_date', '<=', $end->toDateString());
     }
 
     #[Scope]

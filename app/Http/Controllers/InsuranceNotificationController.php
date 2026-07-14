@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Insurance;
 use App\Services\InsuranceService;
-use Illuminate\Support\Collection;
+use Carbon\CarbonInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -12,35 +14,60 @@ final class InsuranceNotificationController extends Controller
 {
     public function __construct(private readonly InsuranceService $insurances) {}
 
-    public function __invoke(): Response
+    public function __invoke(Request $request): Response
     {
-        $groups = $this->insurances->expiringGroups();
+        $expiry = $request->string('expiry')->trim()->value() ?: null;
+        $unreadOnly = $request->boolean('unread');
+
+        $notifications = $this->insurances->paginatedNotifications($expiry, $unreadOnly);
 
         return Inertia::render('Insurances/Notifications', [
-            'overdue' => $this->toArray($groups['overdue']),
-            'today' => $this->toArray($groups['today']),
-            'buckets' => collect($groups['buckets'])
-                ->map(fn (Collection $policies): array => $this->toArray($policies))
-                ->all(),
+            'notifications' => Inertia::scroll($this->transform($notifications)),
+            'tabCounts' => $this->insurances->notificationTabCounts(),
+            'filters' => [
+                'expiry' => $expiry,
+                'unread' => $unreadOnly,
+            ],
             'notificationTime' => config('insurance-bot.notification_time'),
         ]);
     }
 
-    /**
-     * @param  Collection<int, Insurance>  $policies
-     * @return list<array<string, mixed>>
-     */
-    private function toArray(Collection $policies): array
+    private function transform(LengthAwarePaginator $paginator): LengthAwarePaginator
     {
-        return $policies
-            ->map(fn (Insurance $insurance): array => [
-                'id' => $insurance->id,
-                'policy_no' => $insurance->policy_no,
-                'insured_name' => $insurance->insured_name,
-                'insurance_company' => $insurance->insurance_company,
-                'expiry_date' => $insurance->expiry_date->format('Y-m-d'),
-                'read' => $insurance->notification_read_at !== null,
-            ])
-            ->all();
+        $ranges = $this->insurances->expiryRanges();
+
+        return $paginator->through(fn (Insurance $insurance): array => [
+            'id' => $insurance->id,
+            'policy_no' => $insurance->policy_no,
+            'insured_name' => $insurance->insured_name,
+            'insurance_company' => $insurance->insurance_company,
+            'expiry_date' => $insurance->expiry_date->format('Y-m-d'),
+            'read' => $insurance->notification_read_at !== null,
+            'bucket' => $this->bucketFor($insurance->expiry_date, $ranges),
+        ]);
+    }
+
+    /**
+     * @param  array<int, array{0: int, 1: int}>  $ranges
+     */
+    private function bucketFor(CarbonInterface $expiryDate, array $ranges): string
+    {
+        if ($expiryDate->isPast() && ! $expiryDate->isToday()) {
+            return 'Expired';
+        }
+
+        if ($expiryDate->isToday()) {
+            return 'Today';
+        }
+
+        $days = today()->diffInDays($expiryDate);
+
+        foreach ($ranges as $threshold => [$min, $max]) {
+            if ($days >= $min && $days <= $max) {
+                return "{$threshold}d";
+            }
+        }
+
+        return "{$days}d";
     }
 }

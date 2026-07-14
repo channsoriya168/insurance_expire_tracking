@@ -22,32 +22,87 @@ beforeEach(function () {
     $this->post('/telegram/auth', ['init_data' => $initData])->assertRedirect('/insurances');
 });
 
-it('groups overdue, expiring-today, and soon-to-expire policies for the notifications page', function () {
+it('lists overdue, expiring-today, and soon-to-expire policies sorted by expiry date', function () {
     $overdue = Insurance::factory()->expired()->create();
     $expiringToday = Insurance::factory()->create(['expiry_date' => today()]);
     $in10 = Insurance::factory()->expiringInDays(10)->create();
-    Insurance::factory()->expiringInDays(15)->create();
+    $in15 = Insurance::factory()->create(['expiry_date' => today()->addDays(15)]);
 
     $this->get('/insurances-notifications')
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('Insurances/Notifications')
-            ->where('overdue.0.id', $overdue->id)
-            ->where('today.0.id', $expiringToday->id)
-            ->where('buckets.10.0.id', $in10->id)
-            ->where('buckets.20', [])
-            ->where('buckets.30', []));
+            ->has('notifications.data', 4)
+            ->where('notifications.data.0.id', $overdue->id)
+            ->where('notifications.data.1.id', $expiringToday->id)
+            ->where('notifications.data.2.id', $in10->id)
+            ->where('notifications.data.3.id', $in15->id)
+            ->where('tabCounts.all', 4)
+            ->where('tabCounts.today', 1)
+            ->where('tabCounts.buckets.10', 1)
+            ->where('tabCounts.buckets.20', 1)
+            ->where('tabCounts.buckets.30', 0));
+});
+
+it('filters the notifications list by expiry bucket', function () {
+    $expiringToday = Insurance::factory()->create(['expiry_date' => today()]);
+    Insurance::factory()->expiringInDays(10)->create();
+
+    $this->get('/insurances-notifications?expiry=today')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('notifications.data', 1)
+            ->where('notifications.data.0.id', $expiringToday->id));
+});
+
+it('keeps a policy visible in its expiry bucket range, not just on the exact threshold day', function () {
+    $withinTenDayRange = Insurance::factory()->create(['expiry_date' => today()->addDays(7)]);
+    $withinTwentyDayRange = Insurance::factory()->create(['expiry_date' => today()->addDays(15)]);
+    Insurance::factory()->create(['expiry_date' => today()->addDays(45)]);
+
+    $this->get('/insurances-notifications')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('tabCounts.all', 2)
+            ->where('tabCounts.buckets.10', 1)
+            ->where('tabCounts.buckets.20', 1)
+            ->where('tabCounts.buckets.30', 0));
+
+    $this->get('/insurances-notifications?expiry=10')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('notifications.data', 1)
+            ->where('notifications.data.0.id', $withinTenDayRange->id)
+            ->where('notifications.data.0.bucket', '10d'));
+
+    $this->get('/insurances-notifications?expiry=20')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('notifications.data', 1)
+            ->where('notifications.data.0.id', $withinTwentyDayRange->id)
+            ->where('notifications.data.0.bucket', '20d'));
+});
+
+it('filters the notifications list to unread policies only', function () {
+    Insurance::factory()->expired()->create(['notification_read_at' => now()]);
+    $unread = Insurance::factory()->expiringInDays(10)->create();
+
+    $this->get('/insurances-notifications?unread=1')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('notifications.data', 1)
+            ->where('notifications.data.0.id', $unread->id));
 });
 
 it('shares an expiring policy count for the bottom nav badge', function () {
     Insurance::factory()->expired()->create();
     Insurance::factory()->create(['expiry_date' => today()]);
     Insurance::factory()->expiringInDays(20)->create();
-    Insurance::factory()->expiringInDays(15)->create();
+    Insurance::factory()->create(['expiry_date' => today()->addDays(15)]);
 
     $this->get('/insurances')
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->where('expiringCount', 3));
+        ->assertInertia(fn ($page) => $page->where('expiringCount', 4));
 });
 
 it('toggles a policy notification read state', function () {

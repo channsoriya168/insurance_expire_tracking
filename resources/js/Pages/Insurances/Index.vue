@@ -1,10 +1,12 @@
 <script setup>
 import { Link, router } from '@inertiajs/vue3';
 import { watchDebounced } from '@vueuse/core';
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import { ArrowDownNarrowWide, ArrowUpNarrowWide, Plus, Search, X } from '@lucide/vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Icon from '@/Components/Icon.vue';
+import ExpiryTabs from '@/Components/ExpiryTabs.vue';
+import { expiryStatus as expiryInfo } from '@/expiryStatus';
 
 const props = defineProps({
     insurances: { type: Object, required: true },
@@ -14,19 +16,8 @@ const props = defineProps({
 
 const search = ref(props.filters.search ?? '');
 const expiry = ref(props.filters.expiry ?? '');
-const sort = ref(props.filters.sort ?? 'asc');
+const sort = ref(props.filters.sort ?? 'desc');
 const showSearch = ref(!!search.value);
-
-const expiryTabs = computed(() => [
-    { value: '', label: 'All', icon: 'list', activeClass: 'bg-slate-900 shadow-slate-900/30' },
-    { value: 'today', label: 'Today', icon: 'alert-triangle', activeClass: 'bg-red-500 shadow-red-500/30' },
-    ...props.expiryThresholds.map((days) => ({
-        value: String(days),
-        label: `${days} Days`,
-        icon: 'calendar',
-        activeClass: days <= 10 ? 'bg-red-500 shadow-red-500/30' : 'bg-amber-500 shadow-amber-500/30',
-    })),
-]);
 
 function applyFilters() {
     router.get(
@@ -34,14 +25,14 @@ function applyFilters() {
         {
             search: search.value || undefined,
             expiry: expiry.value || undefined,
-            sort: sort.value === 'desc' ? 'desc' : undefined,
+            sort: sort.value === 'asc' ? 'asc' : undefined,
         },
         { preserveState: true, replace: true },
     );
 }
 
 function pickExpiry(value) {
-    expiry.value = expiry.value === value ? '' : value;
+    expiry.value = value;
     applyFilters();
 }
 
@@ -62,44 +53,6 @@ function destroy(insurance) {
     }
 
     router.delete(`/insurances/${insurance.id}`);
-}
-
-function expiryInfo(dateString) {
-    if (!dateString) {
-        return { label: '—', accentClass: 'bg-slate-200', chipClass: 'bg-slate-50 text-slate-400' };
-    }
-
-    const days = Math.ceil((new Date(`${dateString}T00:00:00`) - new Date(new Date().toDateString())) / 86400000);
-
-    if (days < 0) {
-        return {
-            label: `Expired ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} ago · ${dateString}`,
-            accentClass: 'bg-red-500',
-            chipClass: 'bg-red-50 text-red-600',
-        };
-    }
-
-    if (days === 0) {
-        return { label: `Expires today · ${dateString}`, accentClass: 'bg-red-500', chipClass: 'bg-red-50 text-red-600' };
-    }
-
-    if (days <= 10) {
-        return {
-            label: `Expires in ${days} day${days === 1 ? '' : 's'} · ${dateString}`,
-            accentClass: 'bg-red-500',
-            chipClass: 'bg-red-50 text-red-600',
-        };
-    }
-
-    if (days <= 30) {
-        return {
-            label: `Expires in ${days} days · ${dateString}`,
-            accentClass: 'bg-amber-500',
-            chipClass: 'bg-amber-50 text-amber-600',
-        };
-    }
-
-    return { label: dateString, accentClass: 'bg-emerald-500', chipClass: 'bg-emerald-50 text-emerald-600' };
 }
 
 function statusBadgeClass(value) {
@@ -183,23 +136,7 @@ function statusBadgeClass(value) {
             </form>
         </Transition>
 
-        <div class="mb-4 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <button
-                v-for="tab in expiryTabs"
-                :key="tab.value"
-                type="button"
-                class="flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors active:scale-95"
-                :class="
-                    expiry === tab.value
-                        ? `${tab.activeClass} text-white shadow-sm`
-                        : 'border border-slate-200 bg-white text-slate-500'
-                "
-                @click="pickExpiry(tab.value)"
-            >
-                <Icon :name="tab.icon" class="h-3.5 w-3.5" />
-                {{ tab.label }}
-            </button>
-        </div>
+        <ExpiryTabs :model-value="expiry" :expiry-thresholds="props.expiryThresholds" @update:model-value="pickExpiry" />
 
         <div class="mb-3 flex items-center justify-between gap-2">
             <p class="text-xs font-medium text-slate-400">
@@ -212,7 +149,7 @@ function statusBadgeClass(value) {
                 @click="toggleSort"
             >
                 <component :is="sort === 'desc' ? ArrowDownNarrowWide : ArrowUpNarrowWide" class="h-3.5 w-3.5" />
-                {{ sort === 'desc' ? 'Latest first' : 'Soonest first' }}
+                {{ sort === 'desc' ? 'Newest first' : 'Oldest first' }}
             </button>
         </div>
 

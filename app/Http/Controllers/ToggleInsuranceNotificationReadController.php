@@ -14,6 +14,6 @@ final class ToggleInsuranceNotificationReadController extends Controller
     {
         $this->insurances->toggleNotificationRead($insurance);
 
-        return back();
+        return to_route('insurances.notifications');
     }
 }

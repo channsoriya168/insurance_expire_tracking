@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Insurance;
 use App\Support\ExpiryDateRange;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -77,18 +78,109 @@ final class InsuranceService
     }
 
     /**
+     * Non-overlapping day-count ranges derived from the configured
+     * thresholds (e.g. [10, 20, 30] becomes 1-10, 11-20, 21-30), so a policy
+     * keeps showing in its notification bucket every day it's within that
+     * window instead of only on the one exact day it crosses a threshold.
+     *
+     * @return array<int, array{0: int, 1: int}>
+     */
+    public function expiryRanges(): array
+    {
+        /** @var list<int> $thresholds */
+        $thresholds = config('insurance-bot.expiry_thresholds');
+        sort($thresholds);
+
+        $ranges = [];
+        $lowerBound = 1;
+
+        foreach ($thresholds as $days) {
+            $ranges[$days] = [$lowerBound, $days];
+            $lowerBound = $days + 1;
+        }
+
+        return $ranges;
+    }
+
+    /**
+     * Single expiry-date-sorted, paginated list of overdue/today/soon-to-expire
+     * policies for the notifications screen's infinite scroll, optionally
+     * narrowed to one expiry bucket ('today', or a configured day threshold)
+     * and/or unread-only.
+     */
+    public function paginatedNotifications(?string $expiry, bool $unreadOnly, int $perPage = 15): LengthAwarePaginator
+    {
+        $ranges = $this->expiryRanges();
+
+        return $this->notificationScopeQuery($ranges)
+            ->when($expiry === 'today', fn (Builder $q) => $q->expiringOn(today()))
+            ->when(
+                $expiry !== null && ctype_digit($expiry) && isset($ranges[(int) $expiry]),
+                function (Builder $q) use ($ranges, $expiry): void {
+                    [$min, $max] = $ranges[(int) $expiry];
+                    $q->expiringBetween(today()->addDays($min), today()->addDays($max));
+                },
+            )
+            ->when($unreadOnly, fn (Builder $q) => $q->whereNull('notification_read_at'))
+            ->orderBy('expiry_date')
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
+    /**
+     * Counts for each notification tab badge, independent of the active filter.
+     *
+     * @return array{all: int, unread: int, today: int, buckets: array<int, int>}
+     */
+    public function notificationTabCounts(): array
+    {
+        $ranges = $this->expiryRanges();
+        $todayCount = Insurance::query()->expiringOn(today())->count();
+
+        $bucketCounts = collect($ranges)->mapWithKeys(fn (array $range, int $days): array => [
+            $days => Insurance::query()->expiringBetween(today()->addDays($range[0]), today()->addDays($range[1]))->count(),
+        ]);
+
+        return [
+            'all' => Insurance::query()->expired()->count() + $todayCount + $bucketCounts->sum(),
+            'unread' => $this->expiringUnreadCount(),
+            'today' => $todayCount,
+            'buckets' => $bucketCounts->all(),
+        ];
+    }
+
+    /**
+     * Count of unread policies across the expiring/overdue notification set,
+     * for the "Unread" tab badge on the notifications screen.
+     */
+    public function expiringUnreadCount(): int
+    {
+        return $this->notificationScopeQuery($this->expiryRanges())->whereNull('notification_read_at')->count();
+    }
+
+    /**
      * Total count of overdue, expiring-today, and soon-to-expire policies,
      * for a lightweight notification badge (see {@see self::expiringGroups()}
      * for the full list).
      */
     public function expiringCount(): int
     {
-        /** @var list<int> $thresholds */
-        $thresholds = config('insurance-bot.expiry_thresholds');
+        return $this->notificationScopeQuery($this->expiryRanges())->count();
+    }
 
-        return Insurance::query()->expired()->count()
-            + Insurance::query()->expiringOn(today())->count()
-            + collect($thresholds)->sum(fn (int $days): int => Insurance::query()->expiringInDays($days)->count());
+    /**
+     * @param  array<int, array{0: int, 1: int}>  $ranges
+     * @return Builder<Insurance>
+     */
+    private function notificationScopeQuery(array $ranges): Builder
+    {
+        return Insurance::query()->where(function (Builder $query) use ($ranges): void {
+            $query->expired()->orWhere(fn (Builder $q) => $q->expiringOn(today()));
+
+            foreach ($ranges as [$min, $max]) {
+                $query->orWhere(fn (Builder $q) => $q->expiringBetween(today()->addDays($min), today()->addDays($max)));
+            }
+        });
     }
 
     /**

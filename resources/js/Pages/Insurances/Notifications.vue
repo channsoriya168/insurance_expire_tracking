@@ -1,74 +1,38 @@
 <script setup>
-import { Link, router } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { InfiniteScroll, Link, router } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Icon from '@/Components/Icon.vue';
-import { Switch } from '@/Components/ui/switch';
+import NotificationTabs from '@/Components/NotificationTabs.vue';
+import { expiryStatus } from '@/expiryStatus';
 
 const props = defineProps({
-    overdue: { type: Array, required: true },
-    today: { type: Array, required: true },
-    buckets: { type: Object, required: true },
+    notifications: { type: Object, required: true },
+    tabCounts: { type: Object, required: true },
+    filters: { type: Object, required: true },
     notificationTime: { type: String, default: null },
 });
 
-const sections = computed(() => [
-    {
-        key: 'overdue',
-        title: 'Already Expired',
-        policies: props.overdue,
-        colorClass: 'text-red-500',
-        accentClass: 'bg-red-500',
-        badgeClass: 'bg-red-50 text-red-600',
-    },
-    {
-        key: 'today',
-        title: 'Expiring Today',
-        policies: props.today,
-        colorClass: 'text-red-500',
-        accentClass: 'bg-red-500',
-        badgeClass: 'bg-red-50 text-red-600',
-    },
-    ...Object.entries(props.buckets)
-        .sort(([a], [b]) => Number(a) - Number(b))
-        .map(([days, policies]) => ({
-            key: days,
-            title: `Expiring in ${days} Days`,
-            policies,
-            colorClass: Number(days) <= 10 ? 'text-red-500' : 'text-amber-500',
-            accentClass: Number(days) <= 10 ? 'bg-red-500' : 'bg-amber-500',
-            badgeClass: Number(days) <= 10 ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600',
-        })),
-]);
-
-const totalCount = computed(() => sections.value.reduce((sum, section) => sum + section.policies.length, 0));
-const unreadCount = computed(() =>
-    sections.value.reduce((sum, section) => sum + section.policies.filter((policy) => !policy.read).length, 0),
-);
-const isEmpty = computed(() => totalCount.value === 0);
-
-const tabs = computed(() => [
-    { key: 'all', label: 'All' },
-    { key: 'today', label: 'Today' },
-    ...Object.keys(props.buckets)
-        .sort((a, b) => Number(a) - Number(b))
-        .map((days) => ({ key: days, label: `${days}d` })),
-]);
-
-const activeTab = ref('all');
-const unreadOnly = ref(false);
-
-const visibleSections = computed(() => {
-    const bySelectedTab = sections.value.filter((section) => activeTab.value === 'all' || section.key === activeTab.value);
-
-    if (!unreadOnly.value) {
-        return bySelectedTab;
+const activeTab = computed(() => {
+    if (props.filters.unread) {
+        return 'unread';
     }
 
-    return bySelectedTab.map((section) => ({ ...section, policies: section.policies.filter((policy) => !policy.read) }));
+    return props.filters.expiry ?? 'all';
 });
 
-const isFilteredEmpty = computed(() => visibleSections.value.every((section) => section.policies.length === 0));
+const tabs = computed(() => [
+    { key: 'all', label: 'All', count: props.tabCounts.all },
+    { key: 'unread', label: 'Unread', count: props.tabCounts.unread },
+    { key: 'today', label: 'Today', count: props.tabCounts.today },
+    ...Object.entries(props.tabCounts.buckets)
+        .sort(([a], [b]) => Number(a) - Number(b))
+        .map(([days, count]) => ({ key: days, label: `${days}d`, count })),
+]);
+
+const totalCount = computed(() => props.tabCounts.all);
+const isEmpty = computed(() => totalCount.value === 0);
+const isFilteredEmpty = computed(() => props.notifications.data.length === 0);
 
 const formattedNotificationTime = computed(() => {
     if (!props.notificationTime) {
@@ -78,6 +42,17 @@ const formattedNotificationTime = computed(() => {
     const [hours, minutes] = props.notificationTime.split(':').map(Number);
     return new Date(2000, 0, 1, hours, minutes).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 });
+
+function selectTab(tab) {
+    router.get(
+        '/insurances-notifications',
+        {
+            expiry: tab === 'all' || tab === 'unread' ? undefined : tab,
+            unread: tab === 'unread' ? 1 : undefined,
+        },
+        { preserveState: true, preserveScroll: true, replace: true },
+    );
+}
 
 function toggleRead(policy) {
     router.patch(
@@ -103,51 +78,23 @@ function toggleRead(policy) {
                 <p class="text-xs font-medium text-slate-400">
                     {{ totalCount }} polic{{ totalCount === 1 ? 'y' : 'ies' }} need attention
                 </p>
-                <p v-if="unreadCount > 0" class="flex items-center gap-1.5 text-xs font-semibold text-brand-700">
+                <p v-if="tabCounts.unread > 0" class="flex items-center gap-1.5 text-xs font-semibold text-brand-700">
                     <span class="h-1.5 w-1.5 rounded-full bg-brand-700" />
-                    {{ unreadCount }} unread
+                    {{ tabCounts.unread }} unread
                 </p>
             </div>
 
-            <div v-if="!isEmpty" class="flex items-center justify-between gap-3">
-                <div class="flex flex-1 gap-1.5 overflow-x-auto">
-                    <button
-                        v-for="tab in tabs"
-                        :key="tab.key"
-                        type="button"
-                        class="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors"
-                        :class="activeTab === tab.key ? 'bg-brand-900 text-white' : 'bg-slate-100 text-slate-500 active:bg-slate-200'"
-                        @click="activeTab = tab.key"
-                    >
-                        {{ tab.label }}
-                    </button>
-                </div>
+            <NotificationTabs v-if="!isEmpty" :model-value="activeTab" :tabs="tabs" @update:model-value="selectTab" />
 
-                <label class="flex shrink-0 items-center gap-2 text-xs font-medium text-slate-500">
-                    Unread only
-                    <Switch :model-value="unreadOnly" size="sm" @update:model-value="unreadOnly = $event" />
-                </label>
-            </div>
-
-            <section v-for="section in visibleSections" :key="section.key" v-show="section.policies.length > 0">
-                <h2 class="mb-2 flex items-center gap-1.5 text-sm font-semibold" :class="section.colorClass">
-                    <Icon name="alert-triangle" class="h-4 w-4 shrink-0" />
-                    {{ section.title }}
-                    <span class="rounded-full px-2.5 py-0.5 text-xs font-medium" :class="section.badgeClass">{{ section.policies.length }}</span>
-                </h2>
-
-                <div class="space-y-2.5">
+            <InfiniteScroll v-if="!isFilteredEmpty" data="notifications">
+                <div class="space-y-3">
                     <div
-                        v-for="policy in section.policies"
+                        v-for="policy in notifications.data"
                         :key="policy.id"
-                        class="relative overflow-hidden rounded-2xl border bg-white transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/70"
-                        :class="
-                            policy.read
-                                ? 'border-slate-100 shadow-sm shadow-slate-200/40'
-                                : 'border-slate-200 shadow-md shadow-slate-200/70 ring-1 ring-inset ring-slate-100'
-                        "
+                        class="relative overflow-hidden rounded-2xl border bg-white shadow-sm shadow-slate-200/60 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/70"
+                        :class="policy.read ? 'border-slate-100' : 'border-slate-200 ring-1 ring-inset ring-slate-100'"
                     >
-                        <span class="absolute inset-y-0 left-0 w-1" :class="section.accentClass" />
+                        <span class="absolute inset-y-0 left-0 w-1" :class="expiryStatus(policy.expiry_date).accentClass" />
 
                         <div class="flex items-center pl-5">
                             <button
@@ -158,7 +105,7 @@ function toggleRead(policy) {
                                 @click="toggleRead(policy)"
                             >
                                 <Icon v-if="policy.read" name="check-circle" class="h-5 w-5 text-emerald-400" />
-                                <span v-else class="h-2.5 w-2.5 rounded-full" :class="section.accentClass" />
+                                <span v-else class="h-2.5 w-2.5 rounded-full" :class="expiryStatus(policy.expiry_date).accentClass" />
                             </button>
 
                             <Link
@@ -167,19 +114,27 @@ function toggleRead(policy) {
                                 :class="policy.read ? 'opacity-60' : ''"
                             >
                                 <div class="min-w-0 flex-1">
-                                    <p class="truncate tracking-tight" :class="policy.read ? 'font-medium text-slate-600' : 'font-semibold text-slate-900'">
-                                        {{ policy.policy_no }}
-                                    </p>
-                                    <p class="mt-0.5 flex items-center gap-1.5 truncate text-sm text-slate-500">
-                                        <Icon name="building" class="h-3.5 w-3.5 shrink-0" />
+                                    <div class="flex items-center gap-2">
+                                        <p class="truncate text-base font-semibold tracking-tight" :class="policy.read ? 'text-slate-600' : 'text-slate-900'">
+                                            {{ policy.policy_no }}
+                                        </p>
+                                        <span
+                                            class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                                            :class="expiryStatus(policy.expiry_date).chipClass"
+                                        >
+                                            {{ policy.bucket }}
+                                        </span>
+                                    </div>
+                                    <p class="mt-1 flex items-center gap-1.5 truncate text-sm text-slate-500">
+                                        <Icon name="building" class="h-4 w-4 shrink-0" />
                                         <span class="truncate">{{ policy.insurance_company }} · {{ policy.insured_name }}</span>
                                     </p>
                                     <div
-                                        class="mt-2 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold"
-                                        :class="section.badgeClass"
+                                        class="mt-2.5 flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold"
+                                        :class="expiryStatus(policy.expiry_date).chipClass"
                                     >
                                         <Icon name="calendar" class="h-3.5 w-3.5 shrink-0" />
-                                        {{ policy.expiry_date }}
+                                        {{ expiryStatus(policy.expiry_date).label }}
                                     </div>
                                 </div>
 
@@ -188,7 +143,7 @@ function toggleRead(policy) {
                         </div>
                     </div>
                 </div>
-            </section>
+            </InfiniteScroll>
 
             <div
                 v-if="isEmpty"
