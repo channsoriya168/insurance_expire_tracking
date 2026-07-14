@@ -3,6 +3,7 @@
 use App\Models\Insurance;
 use Illuminate\Support\Facades\URL;
 use Telegram\Bot\Api;
+use Telegram\Bot\FileUpload\InputFile;
 use Telegram\Bot\Objects\Message;
 
 function allowedChatId(): int
@@ -15,21 +16,33 @@ beforeEach(function () {
 
     $this->mock(Api::class, function ($mock) {
         $mock->shouldReceive('sendMessage')->andReturn(new Message([]));
+        $mock->shouldReceive('sendDocument')->andReturn(new Message([]));
     });
 });
 
-it('downloads an xlsx export for the default all filter', function () {
+it('sends the xlsx export to the chat for the default all filter', function () {
     Insurance::factory()->count(3)->create();
 
     $url = URL::temporarySignedRoute('forms.insurances.export', now()->addMinutes(10), ['chat' => allowedChatId()]);
 
+    $this->mock(Api::class, function ($mock) {
+        $mock->shouldReceive('sendDocument')
+            ->once()
+            ->withArgs(function (array $params) {
+                expect($params['chat_id'])->toBe(allowedChatId());
+                expect($params['document'])->toBeInstanceOf(InputFile::class);
+
+                return true;
+            })
+            ->andReturn(new Message([]));
+    });
+
     $response = $this->post($url, ['filter' => 'all']);
 
-    $response->assertOk();
-    expect($response->headers->get('content-type'))->toContain('spreadsheetml');
+    $response->assertOk()->assertSee('Sent!');
 });
 
-it('shows an error instead of downloading when the filter matches nothing', function () {
+it('shows an error instead of sending when the filter matches nothing', function () {
     Insurance::factory()->create(['expiry_date' => '2020-01-01']);
 
     $url = URL::temporarySignedRoute('forms.insurances.export', now()->addMinutes(10), ['chat' => allowedChatId()]);

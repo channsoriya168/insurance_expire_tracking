@@ -4,10 +4,14 @@
 
 @section('content')
     <h1>Export Policies</h1>
-    <p class="subtitle">Choose a filter, then download an Excel file.</p>
+    <p class="subtitle">Choose a filter, then get an Excel file sent to this chat.</p>
 
     @isset($error)
         <div class="error">{{ $error }}</div>
+    @endisset
+
+    @isset($sent)
+        <div class="status">Sent! Check this Telegram chat for the Excel file.</div>
     @endisset
 
     <form method="POST" action="{{ url()->to(request()->getRequestUri()) }}">
@@ -22,6 +26,6 @@
             </div>
         </div>
 
-        <button type="submit" class="primary">Download Excel</button>
+        <button type="submit" class="primary">Send to Telegram</button>
     </form>
 @endsection
