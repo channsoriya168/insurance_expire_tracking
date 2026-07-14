@@ -46,7 +46,7 @@ final class InsuranceNotificationService
      */
     public function syncNotificationFor(Insurance $insurance): void
     {
-        $bucket = $this->bucketKeyFor($insurance->expiry_date);
+        $bucket = $insurance->expiry_date ? $this->bucketKeyFor($insurance->expiry_date) : null;
 
         if ($bucket === null) {
             InsuranceNotification::query()->where('insurance_id', $insurance->id)->delete();

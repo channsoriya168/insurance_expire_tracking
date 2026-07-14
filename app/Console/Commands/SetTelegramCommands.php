@@ -16,7 +16,6 @@ class SetTelegramCommands extends Command
         $telegram->setMyCommands([
             'commands' => [
                 ['command' => 'start', 'description' => 'Show the welcome message'],
-                ['command' => 'export', 'description' => 'Export insurance policies'],
             ],
         ]);
 

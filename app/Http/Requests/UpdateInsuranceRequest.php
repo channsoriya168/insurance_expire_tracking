@@ -15,7 +15,7 @@ class UpdateInsuranceRequest extends StoreInsuranceRequest
         return [
             ...parent::rules(),
             'policy_no' => [
-                'required',
+                'nullable',
                 'string',
                 'max:255',
                 Rule::unique('insurances', 'policy_no')->ignore($this->route('insurance')),

@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\PolicyStatus;
 use App\Models\Insurance;
 use Telegram\Bot\Api;
 use Telegram\Bot\Objects\Message;
@@ -95,6 +96,48 @@ it('creates a policy without notifying the telegram chat', function () {
     $response->assertRedirect('/insurances');
     $response->assertSessionHas('status', 'Policy Y25TEST00099 saved.');
     expect(Insurance::where('policy_no', 'Y25TEST00099')->exists())->toBeTrue();
+});
+
+it('creates a policy without a sum insured', function () {
+    authenticate($this->chatId, $this->botToken);
+
+    $response = $this->post('/insurances', insuranceFormPayload(['sum_insured' => '']));
+
+    $response->assertRedirect('/insurances');
+    $response->assertSessionDoesntHaveErrors();
+    expect(Insurance::where('policy_no', 'Y25TEST00099')->first()->sum_insured)->toBeNull();
+});
+
+it('creates a policy with only the premium provided', function () {
+    authenticate($this->chatId, $this->botToken);
+
+    $response = $this->post('/insurances', [
+        'insurance_company' => '',
+        'policy_no' => '',
+        'contact_method' => '',
+        'contact_value' => '',
+        'contact_person' => '',
+        'insured_name' => '',
+        'expiry_date' => '',
+        'policy_type' => '',
+        'sum_insured' => '',
+        'premium' => '500',
+        'revised_sum_insured' => '',
+        'revised_premium' => '',
+        'revised_premium_rate' => '',
+        'confirmed_date' => '',
+        'status' => '',
+        'request_policy_date' => '',
+        'policy_received_date' => '',
+        'remarks' => '',
+    ]);
+
+    $response->assertRedirect('/insurances');
+    $response->assertSessionDoesntHaveErrors();
+
+    $insurance = Insurance::where('premium', 500)->first();
+    expect($insurance)->not->toBeNull();
+    expect($insurance->status)->toBe(PolicyStatus::Pending);
 });
 
 it('rejects invalid input without creating a policy', function () {

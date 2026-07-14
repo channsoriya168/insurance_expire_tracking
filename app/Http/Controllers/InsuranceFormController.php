@@ -3,16 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Exports\InsurancesExport;
+use App\Models\Insurance;
 use App\Services\InsuranceService;
 use App\Support\ExpiryDateRange;
 use App\Telegram\AllowedChats;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use InvalidArgumentException;
+use Maatwebsite\Excel\Excel as ExcelWriterType;
 use Maatwebsite\Excel\Facades\Excel;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Telegram\Bot\Api;
+use Telegram\Bot\FileUpload\InputFile;
 
 final class InsuranceFormController extends Controller
 {
@@ -27,7 +30,7 @@ final class InsuranceFormController extends Controller
         return view('forms.insurances.export', ['filter' => $filter === '' ? 'all' : $filter]);
     }
 
-    public function export(Request $request): BinaryFileResponse|View
+    public function export(Request $request): View
     {
         $this->assertChatAllowed($request);
 
@@ -45,9 +48,9 @@ final class InsuranceFormController extends Controller
             return view('forms.insurances.export', ['filter' => $filter, 'error' => 'No policies found for that filter.']);
         }
 
-        $this->notifyChat($request, "Exported policies (filter: {$filter}) via the web form.");
+        $this->sendDocumentToChat($request, $query, $filter);
 
-        return Excel::download(new InsurancesExport($query), 'insurances.xlsx');
+        return view('forms.insurances.export', ['filter' => $filter, 'sent' => true]);
     }
 
     private function assertChatAllowed(Request $request): void
@@ -59,12 +62,23 @@ final class InsuranceFormController extends Controller
         }
     }
 
-    private function notifyChat(Request $request, string $text): void
+    /**
+     * @param  Builder<Insurance>  $query
+     */
+    private function sendDocumentToChat(Request $request, Builder $query, string $filter): void
     {
         $chatId = (int) $request->query('chat', 0);
 
-        if ($chatId !== 0 && AllowedChats::contains($chatId)) {
-            app(Api::class)->sendMessage(['chat_id' => $chatId, 'text' => $text]);
+        if ($chatId === 0 || ! AllowedChats::contains($chatId)) {
+            return;
         }
+
+        $contents = Excel::raw(new InsurancesExport($query), ExcelWriterType::XLSX);
+
+        app(Api::class)->sendDocument([
+            'chat_id' => $chatId,
+            'document' => InputFile::createFromContents($contents, 'insurances.xlsx'),
+            'caption' => "Exported policies (filter: {$filter})",
+        ]);
     }
 }
