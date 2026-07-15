@@ -22,6 +22,8 @@ class DatabaseSeeder extends Seeder
             'email' => 'test@example.com',
         ]);
 
+        $this->call(PolicyTypeSeeder::class);
+        $this->call(InsuranceCompanySeeder::class);
         $this->call(InsuranceSeeder::class);
     }
 }
