@@ -63,20 +63,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Allowed Chat IDs [Custom]
-    |--------------------------------------------------------------------------
-    |
-    | Only these chat IDs are allowed to interact with the bot. Any update
-    | from a chat ID not in this list is ignored by TelegramWebhookController.
-    |
-    */
-    'allowed_chat_ids' => array_filter([
-        env('TELEGRAM_CHAT_ID'),
-        env('TELEGRAM_CHAT_ID_2'),
-    ]),
-
-    /*
-    |--------------------------------------------------------------------------
     | Asynchronous Requests [Optional]
     |--------------------------------------------------------------------------
     |
