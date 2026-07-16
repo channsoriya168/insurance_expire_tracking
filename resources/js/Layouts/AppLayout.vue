@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
-import { Bell, ChevronLeft } from '@lucide/vue';
+import { Bell, ChevronLeft, Settings } from '@lucide/vue';
 import { Button } from '@/Components/ui/button';
 import Icon from '@/Components/Icon.vue';
 
@@ -9,6 +9,7 @@ const props = defineProps({
     title: { type: String, default: 'Insurance Policies' },
     backHref: { type: String, default: null },
     hideNotifications: { type: Boolean, default: false },
+    hideSettings: { type: Boolean, default: false },
 });
 
 const page = usePage();
@@ -58,6 +59,18 @@ onUnmounted(() => {
                 </Button>
 
                 <h1 class="min-w-0 flex-1 truncate text-[17px] font-bold tracking-tight text-white">{{ title }}</h1>
+
+                <Button
+                    v-if="!hideSettings"
+                    as-child
+                    variant="ghost"
+                    size="icon"
+                    class="shrink-0 text-white hover:bg-white/10 hover:text-white"
+                >
+                    <Link href="/settings" aria-label="Settings">
+                        <Settings class="h-5 w-5" />
+                    </Link>
+                </Button>
 
                 <Button
                     v-if="!hideNotifications"
