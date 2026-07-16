@@ -1,7 +1,10 @@
 <?php
 
+use App\Enums\PaymentStatus;
 use App\Enums\PolicyStatus;
 use App\Models\Insurance;
+use App\Models\InsuranceCompany;
+use App\Models\PolicyType;
 use Telegram\Bot\Api;
 use Telegram\Bot\Objects\Message;
 
@@ -84,6 +87,20 @@ it('does not mark the notification read when viewing details from elsewhere', fu
     expect($insurance->notification->fresh()->read_at)->toBeNull();
 });
 
+it('passes insurance company and policy type options to the create form', function () {
+    InsuranceCompany::factory()->create(['name' => 'Lonpac']);
+    PolicyType::factory()->create(['name' => 'Motor']);
+
+    authenticate($this->chatId, $this->botToken);
+
+    $this->get('/insurances/create')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Insurances/Create')
+            ->where('insuranceCompanies', ['Lonpac'])
+            ->where('policyTypes', ['Motor']));
+});
+
 it('creates a policy without notifying the telegram chat', function () {
     $this->mock(Api::class, function ($mock) {
         $mock->shouldNotReceive('sendMessage');
@@ -98,17 +115,16 @@ it('creates a policy without notifying the telegram chat', function () {
     expect(Insurance::where('policy_no', 'Y25TEST00099')->exists())->toBeTrue();
 });
 
-it('creates a policy without a sum insured', function () {
+it('rejects a policy without a sum insured', function () {
     authenticate($this->chatId, $this->botToken);
 
     $response = $this->post('/insurances', insuranceFormPayload(['sum_insured' => '']));
 
-    $response->assertRedirect('/insurances');
-    $response->assertSessionDoesntHaveErrors();
-    expect(Insurance::where('policy_no', 'Y25TEST00099')->first()->sum_insured)->toBeNull();
+    $response->assertInvalid(['sum_insured']);
+    expect(Insurance::where('policy_no', 'Y25TEST00099')->exists())->toBeFalse();
 });
 
-it('creates a policy with only the premium provided', function () {
+it('rejects a policy with only the premium provided', function () {
     authenticate($this->chatId, $this->botToken);
 
     $response = $this->post('/insurances', [
@@ -122,22 +138,36 @@ it('creates a policy with only the premium provided', function () {
         'policy_type' => '',
         'sum_insured' => '',
         'premium' => '500',
+        'net_premium' => '',
         'revised_sum_insured' => '',
         'revised_premium' => '',
         'revised_premium_rate' => '',
         'confirmed_date' => '',
         'status' => '',
-        'request_policy_date' => '',
+        'payment_status' => '',
+        'payment_date' => '',
         'policy_received_date' => '',
         'remarks' => '',
     ]);
 
-    $response->assertRedirect('/insurances');
-    $response->assertSessionDoesntHaveErrors();
+    $response->assertInvalid([
+        'insurance_company', 'policy_no', 'contact_method', 'contact_value', 'contact_person',
+        'insured_name', 'expiry_date', 'policy_type', 'sum_insured', 'net_premium',
+        'revised_sum_insured', 'revised_premium', 'revised_premium_rate',
+    ]);
+    expect(Insurance::where('premium', 500)->exists())->toBeFalse();
+});
 
-    $insurance = Insurance::where('premium', 500)->first();
-    expect($insurance)->not->toBeNull();
+it('defaults status and payment status when left blank', function () {
+    authenticate($this->chatId, $this->botToken);
+
+    $response = $this->post('/insurances', insuranceFormPayload());
+
+    $response->assertRedirect('/insurances');
+
+    $insurance = Insurance::where('policy_no', 'Y25TEST00099')->first();
     expect($insurance->status)->toBe(PolicyStatus::Pending);
+    expect($insurance->payment_status)->toBe(PaymentStatus::Unpaid);
 });
 
 it('rejects invalid input without creating a policy', function () {
@@ -247,13 +277,15 @@ function insuranceFormPayload(array $overrides = []): array
         'policy_type' => 'Fire',
         'sum_insured' => '100000',
         'premium' => '500',
-        'revised_sum_insured' => '',
-        'revised_premium' => '',
-        'revised_premium_rate' => '',
+        'net_premium' => '425',
+        'revised_sum_insured' => '100000',
+        'revised_premium' => '500',
+        'revised_premium_rate' => '0.500',
         'confirmed_date' => '',
         'status' => '',
-        'request_policy_date' => '',
+        'payment_status' => '',
+        'payment_date' => '',
         'policy_received_date' => '',
-        'remarks' => '',
+        'remarks' => 'Test remarks',
     ], $overrides);
 }

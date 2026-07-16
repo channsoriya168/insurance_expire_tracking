@@ -3,6 +3,7 @@
 use App\Models\Insurance;
 use App\Models\InsuranceNotification;
 use Telegram\Bot\Api;
+use Telegram\Bot\Exceptions\TelegramSDKException;
 
 it('sends a summary to every allowed chat id', function () {
     config(['insurance-bot.allowed_chat_ids' => [111, 222]]);
@@ -47,6 +48,25 @@ it('does not send a second Telegram summary if run again the same day', function
     });
 
     $this->artisan('insurance:notify-expiring')->assertExitCode(0);
+    $this->artisan('insurance:notify-expiring')->assertExitCode(0);
+});
+
+it('still notifies the remaining chats when one chat fails', function () {
+    config(['insurance-bot.allowed_chat_ids' => [111, 222]]);
+
+    Insurance::factory()->create(['expiry_date' => today()]);
+
+    $this->mock(Api::class, function ($mock) {
+        $mock->shouldReceive('sendMessage')
+            ->withArgs(fn (array $params) => $params['chat_id'] === 111)
+            ->once()
+            ->andThrow(new TelegramSDKException('Bad Request: chat not found'));
+
+        $mock->shouldReceive('sendMessage')
+            ->withArgs(fn (array $params) => $params['chat_id'] === 222)
+            ->once();
+    });
+
     $this->artisan('insurance:notify-expiring')->assertExitCode(0);
 });
 

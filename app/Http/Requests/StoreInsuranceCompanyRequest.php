@@ -1,0 +1,39 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rule;
+
+class StoreInsuranceCompanyRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    /**
+     * @return array<string, ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:255', Rule::unique('insurance_companies', 'name')],
+        ];
+    }
+
+    /**
+     * This endpoint is only ever called via the form's JSON fetch client, so
+     * always respond with JSON errors instead of the app's default redirect
+     * (the global exception handler only renders JSON for api/* routes).
+     */
+    protected function failedValidation(Validator $validator): void
+    {
+        throw new HttpResponseException(
+            response()->json(['message' => 'The given data was invalid.', 'errors' => $validator->errors()], 422),
+        );
+    }
+}

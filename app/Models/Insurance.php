@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ContactMethod;
+use App\Enums\PaymentStatus;
 use App\Enums\PolicyStatus;
 use Carbon\CarbonInterface;
 use Database\Factories\InsuranceFactory;
@@ -24,12 +25,14 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'policy_type',
     'sum_insured',
     'premium',
+    'net_premium',
     'revised_sum_insured',
     'revised_premium',
     'revised_premium_rate',
     'confirmed_date',
     'status',
-    'request_policy_date',
+    'payment_status',
+    'payment_date',
     'policy_received_date',
     'remarks',
 ])]
@@ -47,14 +50,16 @@ class Insurance extends Model
             'contact_method' => ContactMethod::class,
             'expiry_date' => 'date',
             'confirmed_date' => 'date',
-            'request_policy_date' => 'date',
+            'payment_date' => 'date',
             'policy_received_date' => 'date',
             'sum_insured' => 'decimal:2',
             'premium' => 'decimal:2',
+            'net_premium' => 'decimal:2',
             'revised_sum_insured' => 'decimal:2',
             'revised_premium' => 'decimal:2',
             'revised_premium_rate' => 'decimal:4',
             'status' => PolicyStatus::class,
+            'payment_status' => PaymentStatus::class,
         ];
     }
 

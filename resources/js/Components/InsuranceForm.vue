@@ -1,22 +1,38 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { INSURANCE_FIELDS } from '@/insuranceFields';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { Textarea } from '@/Components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
+import CreatableSelect from '@/Components/CreatableSelect.vue';
 
 const props = defineProps({
     form: { type: Object, required: true },
     contactMethods: { type: Array, required: true },
     statuses: { type: Array, required: true },
+    paymentStatuses: { type: Array, default: () => [] },
+    insuranceCompanies: { type: Array, default: () => [] },
+    policyTypes: { type: Array, default: () => [] },
     submitLabel: { type: String, default: 'Save' },
     mode: { type: String, default: 'create' },
 });
 
 function selectOptions(field) {
-    return field.key === 'status' ? props.statuses : props.contactMethods;
+    if (field.key === 'status') {
+        return props.statuses;
+    }
+
+    if (field.key === 'payment_status') {
+        return props.paymentStatuses;
+    }
+
+    return props.contactMethods;
+}
+
+function creatableOptions(field) {
+    return field.optionsKey === 'policyTypes' ? props.policyTypes : props.insuranceCompanies;
 }
 
 const emit = defineEmits(['submit']);
@@ -32,11 +48,11 @@ const sections = computed(() => {
         let group = grouped.find((g) => g.title === field.section);
 
         if (!group) {
-            group = { title: field.section, fields: [], advancedFields: [] };
+            group = { title: field.section, fields: [] };
             grouped.push(group);
         }
 
-        (field.advanced ? group.advancedFields : group.fields).push(field);
+        group.fields.push(field);
     }
 
     return grouped;
@@ -48,6 +64,39 @@ const fieldClass =
 function inputClass(field) {
     return field.type === 'date' ? `${fieldClass} appearance-none` : fieldClass;
 }
+
+function roundTo(value, decimals) {
+    const factor = 10 ** decimals;
+
+    return Math.round(value * factor) / factor;
+}
+
+watch(
+    () => [props.form.revised_sum_insured, props.form.revised_premium],
+    ([revisedSumInsured, revisedPremium]) => {
+        const sumInsured = parseFloat(revisedSumInsured);
+        const premium = parseFloat(revisedPremium);
+
+        if (!Number.isFinite(sumInsured) || sumInsured === 0 || !Number.isFinite(premium)) {
+            return;
+        }
+
+        props.form.revised_premium_rate = ((premium / sumInsured) * 100).toFixed(3);
+    },
+);
+
+watch(
+    () => props.form.revised_premium,
+    (revisedPremium) => {
+        const premium = parseFloat(revisedPremium);
+
+        if (!Number.isFinite(premium)) {
+            return;
+        }
+
+        props.form.net_premium = roundTo(premium * (85 / 100), 2);
+    },
+);
 </script>
 
 <template>
@@ -65,7 +114,18 @@ function inputClass(field) {
                         {{ field.label }}<span v-if="field.required" class="text-red-500"> *</span>
                     </Label>
 
-                    <Select v-if="field.type === 'select'" v-model="form[field.key]">
+                    <CreatableSelect
+                        v-if="field.type === 'creatable-select'"
+                        v-model="form[field.key]"
+                        :id="field.key"
+                        :options="creatableOptions(field)"
+                        :placeholder="field.placeholder"
+                        :label="field.label.toLowerCase()"
+                        :create-url="field.createUrl"
+                        :trigger-class="fieldClass"
+                    />
+
+                    <Select v-else-if="field.type === 'select'" v-model="form[field.key]">
                         <SelectTrigger :id="field.key" :class="fieldClass">
                             <SelectValue :placeholder="`Select ${field.label.toLowerCase()}`" />
                         </SelectTrigger>
@@ -90,7 +150,7 @@ function inputClass(field) {
                         :id="field.key"
                         v-model="form[field.key]"
                         :type="field.type"
-                        :step="field.type === 'number' ? '0.01' : undefined"
+                        :step="field.type === 'number' ? (field.step ?? '0.01') : undefined"
                         :placeholder="field.placeholder"
                         :class="inputClass(field)"
                     />
@@ -100,48 +160,6 @@ function inputClass(field) {
                     </p>
                 </div>
             </div>
-
-            <details v-if="section.advancedFields.length" class="group mt-4">
-                <summary
-                    class="flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-brand-700 select-none"
-                >
-                    <span class="transition-transform group-open:rotate-90">›</span>
-                    Optional details
-                </summary>
-
-                <div class="mt-3 space-y-4 border-t border-slate-200 pt-4">
-                    <div v-for="field in section.advancedFields" :key="field.key">
-                        <Label :for="field.key" class="text-sm font-medium text-slate-600">
-                            {{ field.label }}
-                        </Label>
-
-                        <Select v-if="field.type === 'select'" v-model="form[field.key]">
-                            <SelectTrigger :id="field.key" :class="fieldClass">
-                                <SelectValue :placeholder="`Select ${field.label.toLowerCase()}`" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem v-for="option in selectOptions(field)" :key="option" :value="option">
-                                    {{ option }}
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-
-                        <Input
-                            v-else
-                            :id="field.key"
-                            v-model="form[field.key]"
-                            :type="field.type"
-                            :step="field.type === 'number' ? '0.01' : undefined"
-                            :placeholder="field.placeholder"
-                            :class="inputClass(field)"
-                        />
-
-                        <p v-if="form.errors[field.key]" class="mt-1.5 text-sm text-red-500">
-                            {{ form.errors[field.key] }}
-                        </p>
-                    </div>
-                </div>
-            </details>
         </section>
 
         <Button

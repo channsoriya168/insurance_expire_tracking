@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreInsuranceRequest;
 use App\Http\Requests\UpdateInsuranceRequest;
 use App\Models\Insurance;
+use App\Models\InsuranceCompany;
+use App\Models\PolicyType;
 use App\Services\InsuranceNotificationService;
 use App\Services\InsuranceService;
 use App\Telegram\Conversations\PolicyFieldSteps;
@@ -96,15 +98,15 @@ final class InsuranceController extends Controller
         return Inertia::render('Insurances/Create', [
             'contactMethods' => PolicyFieldSteps::contactMethods(),
             'statuses' => PolicyFieldSteps::statuses(),
+            'paymentStatuses' => PolicyFieldSteps::paymentStatuses(),
+            'insuranceCompanies' => InsuranceCompany::orderBy('name')->pluck('name'),
+            'policyTypes' => PolicyType::orderBy('name')->pluck('name'),
         ]);
     }
 
     public function store(StoreInsuranceRequest $request): RedirectResponse
     {
-        $data = $request->validated();
-        $data['status'] = $data['status'] ?: 'Pending';
-
-        $insurance = $this->insurances->create($data);
+        $insurance = $this->insurances->create($request->validated());
 
         return to_route('insurances.index')->with('status', "Policy {$insurance->policy_no} saved.");
     }
@@ -115,15 +117,15 @@ final class InsuranceController extends Controller
             'insurance' => $this->toFormArray($insurance),
             'contactMethods' => PolicyFieldSteps::contactMethods(),
             'statuses' => PolicyFieldSteps::statuses(),
+            'paymentStatuses' => PolicyFieldSteps::paymentStatuses(),
+            'insuranceCompanies' => InsuranceCompany::orderBy('name')->pluck('name'),
+            'policyTypes' => PolicyType::orderBy('name')->pluck('name'),
         ]);
     }
 
     public function update(UpdateInsuranceRequest $request, Insurance $insurance): RedirectResponse
     {
-        $data = $request->validated();
-        $data['status'] = $data['status'] ?: 'Pending';
-
-        $this->insurances->update($insurance, $data);
+        $this->insurances->update($insurance, $request->validated());
 
         return to_route('insurances.index')->with('status', "Policy {$insurance->policy_no} updated.");
     }
@@ -155,7 +157,7 @@ final class InsuranceController extends Controller
     {
         $fields = $insurance->only(['id', ...PolicyFieldSteps::ORDER]);
 
-        foreach (['expiry_date', 'confirmed_date', 'request_policy_date', 'policy_received_date'] as $dateField) {
+        foreach (['expiry_date', 'confirmed_date', 'payment_date', 'policy_received_date'] as $dateField) {
             $fields[$dateField] = $insurance->{$dateField}?->format('Y-m-d');
         }
 

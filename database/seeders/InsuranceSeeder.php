@@ -2,12 +2,21 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ContactMethod;
 use App\Models\Insurance;
 use App\Services\InsuranceNotificationService;
 use Illuminate\Database\Seeder;
 
 class InsuranceSeeder extends Seeder
 {
+    /**
+     * Columns still allowed to be null now that the insurances table
+     * requires every other column to have a value.
+     *
+     * @var list<string>
+     */
+    private const array NULLABLE_COLUMNS = ['confirmed_date', 'payment_date', 'policy_received_date', 'remarks'];
+
     /**
      * Run the database seeds.
      */
@@ -17,16 +26,42 @@ class InsuranceSeeder extends Seeder
             'insurance_company', 'policy_no', 'contact_method', 'contact_value', 'contact_person',
             'insured_name', 'expiry_date', 'policy_type', 'sum_insured', 'premium',
             'revised_sum_insured', 'revised_premium', 'revised_premium_rate', 'confirmed_date',
-            'status', 'request_policy_date', 'policy_received_date', 'remarks',
+            'status', 'payment_date', 'policy_received_date', 'remarks',
         ];
 
         foreach ($this->records() as $record) {
-            Insurance::create(array_combine($columns, $record));
+            Insurance::create($this->fillRequiredDefaults(array_combine($columns, $record)));
         }
 
         // DatabaseSeeder disables model events, so the InsuranceObserver
         // never fires here; sync notifications for the seeded policies directly.
         $notifications->syncAllNotifications();
+    }
+
+    /**
+     * This seed data is historic and intentionally incomplete; backfill any
+     * null value in a now-required column with a type-appropriate
+     * placeholder instead of inventing more records.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function fillRequiredDefaults(array $data): array
+    {
+        foreach ($data as $column => $value) {
+            if ($value !== null || in_array($column, self::NULLABLE_COLUMNS, true)) {
+                continue;
+            }
+
+            $data[$column] = match ($column) {
+                'sum_insured', 'revised_sum_insured', 'revised_premium', 'revised_premium_rate' => 0,
+                'expiry_date' => today()->toDateString(),
+                'contact_method' => ContactMethod::Phone->value,
+                default => '',
+            };
+        }
+
+        return $data;
     }
 
     /**

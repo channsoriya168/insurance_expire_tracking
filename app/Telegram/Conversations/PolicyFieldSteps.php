@@ -3,10 +3,11 @@
 namespace App\Telegram\Conversations;
 
 use App\Enums\ContactMethod;
+use App\Enums\PaymentStatus;
 use App\Enums\PolicyStatus;
 
 /**
- * Declarative catalogue of the 18 Insurance fields, shared by the form
+ * Declarative catalogue of the 20 Insurance fields, shared by the form
  * controller and form request so field order and contact methods aren't
  * duplicated.
  */
@@ -26,12 +27,14 @@ final class PolicyFieldSteps
         'policy_type',
         'sum_insured',
         'premium',
+        'net_premium',
         'revised_sum_insured',
         'revised_premium',
         'revised_premium_rate',
         'confirmed_date',
         'status',
-        'request_policy_date',
+        'payment_status',
+        'payment_date',
         'policy_received_date',
         'remarks',
     ];
@@ -50,5 +53,13 @@ final class PolicyFieldSteps
     public static function statuses(): array
     {
         return PolicyStatus::values();
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function paymentStatuses(): array
+    {
+        return PaymentStatus::values();
     }
 }

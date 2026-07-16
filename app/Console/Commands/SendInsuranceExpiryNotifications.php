@@ -11,7 +11,9 @@ use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Telegram\Bot\Api;
+use Throwable;
 
 #[Signature('insurance:notify-expiring')]
 #[Description('Send a Telegram summary of soon-to-expire insurance policies and refresh the in-app notification list.')]
@@ -36,13 +38,22 @@ class SendInsuranceExpiryNotifications extends Command
         $message = $this->formatMessage($groups);
 
         foreach (AllowedChats::ids() as $chatId) {
-            $telegram->sendMessage([
-                'chat_id' => $chatId,
-                'text' => $message,
-                'reply_markup' => json_encode([
-                    'inline_keyboard' => [[['text' => '🔔 View in App', 'web_app' => ['url' => FormLinks::launch('notifications')]]]],
-                ]),
-            ]);
+            // A single unreachable chat (blocked bot, chat never started, etc.)
+            // must not stop the summary from reaching the other allowed chats.
+            try {
+                $telegram->sendMessage([
+                    'chat_id' => $chatId,
+                    'text' => $message,
+                    'reply_markup' => json_encode([
+                        'inline_keyboard' => [[['text' => '🔔 View in App', 'web_app' => ['url' => FormLinks::launch('notifications')]]]],
+                    ]),
+                ]);
+            } catch (Throwable $e) {
+                Log::warning('Failed to send insurance expiry notification to Telegram chat.', [
+                    'chat_id' => $chatId,
+                    'exception' => $e->getMessage(),
+                ]);
+            }
         }
 
         return self::SUCCESS;

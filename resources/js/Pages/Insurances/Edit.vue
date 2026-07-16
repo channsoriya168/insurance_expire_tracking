@@ -8,6 +8,9 @@ const props = defineProps({
     insurance: { type: Object, required: true },
     contactMethods: { type: Array, required: true },
     statuses: { type: Array, required: true },
+    paymentStatuses: { type: Array, required: true },
+    insuranceCompanies: { type: Array, required: true },
+    policyTypes: { type: Array, required: true },
 });
 
 const form = useForm(
@@ -25,6 +28,9 @@ function submit() {
             :form="form"
             :contact-methods="contactMethods"
             :statuses="statuses"
+            :payment-statuses="paymentStatuses"
+            :insurance-companies="insuranceCompanies"
+            :policy-types="policyTypes"
             mode="edit"
             submit-label="Update Policy"
             @submit="submit"

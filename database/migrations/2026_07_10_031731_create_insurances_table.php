@@ -13,22 +13,24 @@ return new class extends Migration
     {
         Schema::create('insurances', function (Blueprint $table) {
             $table->id();
-            $table->string('insurance_company')->nullable();
-            $table->string('policy_no')->unique()->nullable();
-            $table->string('contact_method')->nullable();
-            $table->string('contact_value')->nullable();
-            $table->string('contact_person')->nullable();
-            $table->string('insured_name')->nullable();
-            $table->date('expiry_date')->nullable();
-            $table->string('policy_type')->nullable();
-            $table->decimal('sum_insured', 14, 2)->nullable();
+            $table->string('insurance_company');
+            $table->string('policy_no')->unique();
+            $table->string('contact_method');
+            $table->string('contact_value');
+            $table->string('contact_person');
+            $table->string('insured_name');
+            $table->date('expiry_date');
+            $table->string('policy_type');
+            $table->decimal('sum_insured', 14, 2);
             $table->decimal('premium', 14, 2);
-            $table->decimal('revised_sum_insured', 14, 2)->nullable();
-            $table->decimal('revised_premium', 14, 2)->nullable();
-            $table->decimal('revised_premium_rate', 8, 4)->nullable();
+            $table->decimal('net_premium', 14, 2)->default(0);
+            $table->decimal('revised_sum_insured', 14, 2);
+            $table->decimal('revised_premium', 14, 2);
+            $table->decimal('revised_premium_rate', 8, 4);
             $table->date('confirmed_date')->nullable();
-            $table->string('status')->default('Pending')->nullable();
-            $table->date('request_policy_date')->nullable();
+            $table->string('status')->default('Pending');
+            $table->string('payment_status')->default('Unpaid');
+            $table->date('payment_date')->nullable();
             $table->date('policy_received_date')->nullable();
             $table->text('remarks')->nullable();
             $table->timestamps();

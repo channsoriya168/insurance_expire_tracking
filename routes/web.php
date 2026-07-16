@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\InsuranceCompanyController;
 use App\Http\Controllers\InsuranceController;
 use App\Http\Controllers\InsuranceFormController;
 use App\Http\Controllers\InsuranceNotificationController;
+use App\Http\Controllers\PolicyTypeController;
 use App\Http\Controllers\TelegramAuthController;
 use App\Http\Controllers\TelegramLaunchController;
 use Illuminate\Support\Facades\Route;
@@ -18,6 +20,8 @@ Route::middleware('telegram.chat')->group(function () {
     Route::get('insurances-notifications', [InsuranceNotificationController::class, 'index'])->name('insurances.notifications');
     Route::patch('insurances-notifications/{insurance}/read', [InsuranceNotificationController::class, 'toggleRead'])->name('insurances.notifications.read');
     Route::resource('insurances', InsuranceController::class);
+    Route::post('insurance-companies', [InsuranceCompanyController::class, 'store'])->name('insurance-companies.store');
+    Route::post('policy-types', [PolicyTypeController::class, 'store'])->name('policy-types.store');
 });
 
 Route::middleware('signed')->prefix('forms/insurances')->name('forms.insurances.')->group(function () {
