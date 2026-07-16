@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Insurance;
 use App\Models\InsuranceCompany;
 use Telegram\Bot\Api;
 use Telegram\Bot\Objects\Message;
@@ -150,4 +151,16 @@ it('deletes an insurance company', function () {
 
     $response->assertOk();
     expect(InsuranceCompany::find($company->id))->toBeNull();
+});
+
+it('refuses to delete an insurance company used by an existing policy', function () {
+    $company = InsuranceCompany::factory()->create();
+    Insurance::factory()->create(['insurance_company_id' => $company->id]);
+
+    authenticateChat($this->chatId, $this->botToken);
+
+    $response = $this->deleteJson("/insurance-companies/{$company->id}");
+
+    $response->assertConflict();
+    expect(InsuranceCompany::find($company->id))->not->toBeNull();
 });

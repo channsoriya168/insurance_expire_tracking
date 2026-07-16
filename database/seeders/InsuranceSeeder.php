@@ -4,6 +4,8 @@ namespace Database\Seeders;
 
 use App\Enums\ContactMethod;
 use App\Models\Insurance;
+use App\Models\InsuranceCompany;
+use App\Models\PolicyType;
 use App\Services\InsuranceNotificationService;
 use Illuminate\Database\Seeder;
 
@@ -30,12 +32,30 @@ class InsuranceSeeder extends Seeder
         ];
 
         foreach ($this->records() as $record) {
-            Insurance::create($this->fillRequiredDefaults(array_combine($columns, $record)));
+            $data = array_combine($columns, $record);
+
+            $data['insurance_company_id'] = $this->resolveLookupId(InsuranceCompany::class, $data['insurance_company']);
+            $data['policy_type_id'] = $this->resolveLookupId(PolicyType::class, $data['policy_type']);
+            unset($data['insurance_company'], $data['policy_type']);
+
+            Insurance::create($this->fillRequiredDefaults($data));
         }
 
         // DatabaseSeeder disables model events, so the InsuranceObserver
         // never fires here; sync notifications for the seeded policies directly.
         $notifications->syncAllNotifications();
+    }
+
+    /**
+     * This seed data is historic and sometimes leaves the company/policy type
+     * blank; those rows are grouped under a shared "Unknown" lookup entry
+     * rather than left unset, since the column is now a required foreign key.
+     *
+     * @param  class-string<InsuranceCompany|PolicyType>  $modelClass
+     */
+    private function resolveLookupId(string $modelClass, ?string $name): int
+    {
+        return $modelClass::firstOrCreate(['name' => trim((string) $name) ?: 'Unknown'])->id;
     }
 
     /**

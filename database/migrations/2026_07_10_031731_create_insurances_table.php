@@ -13,14 +13,14 @@ return new class extends Migration
     {
         Schema::create('insurances', function (Blueprint $table) {
             $table->id();
-            $table->string('insurance_company');
+            $table->foreignId('insurance_company_id')->constrained()->restrictOnDelete();
             $table->string('policy_no')->unique();
             $table->string('contact_method');
             $table->string('contact_value');
             $table->string('contact_person');
             $table->string('insured_name');
             $table->date('expiry_date');
-            $table->string('policy_type');
+            $table->foreignId('policy_type_id')->constrained()->restrictOnDelete();
             $table->decimal('sum_insured', 14, 2);
             $table->decimal('premium', 14, 2);
             $table->decimal('net_premium', 14, 2)->default(0);

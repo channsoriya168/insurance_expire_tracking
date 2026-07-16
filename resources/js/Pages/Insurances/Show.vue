@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
+import { Copy } from '@lucide/vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Icon from '@/Components/Icon.vue';
 import { INSURANCE_FIELDS } from '@/insuranceFields';
@@ -38,7 +39,12 @@ const sections = computed(() => {
 });
 
 function displayValue(field) {
-    const value = props.insurance[field.key];
+    const value =
+        field.key === 'insurance_company_id'
+            ? props.insurance.insurance_company
+            : field.key === 'policy_type_id'
+              ? props.insurance.policy_type
+              : props.insurance[field.key];
 
     return value === null || value === undefined || value === '' ? '—' : value;
 }
@@ -121,13 +127,20 @@ const expiryInfo = computed(() => {
             </dl>
         </section>
 
-        <div class="mt-5 flex gap-2">
+        <div class="mt-5 grid grid-cols-3 gap-2">
             <Link
                 :href="`/insurances/${insurance.id}/edit`"
-                class="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-brand-900 px-4 py-3 text-sm font-bold text-white shadow-md shadow-brand-900/25 transition-transform active:scale-[0.98]"
+                class="flex items-center justify-center gap-1.5 rounded-full bg-brand-900 px-4 py-3 text-sm font-bold text-white shadow-md shadow-brand-900/25 transition-transform active:scale-[0.98]"
             >
                 <Icon name="edit" class="h-4 w-4" />
                 Edit
+            </Link>
+            <Link
+                :href="`/insurances/${insurance.id}/duplicate`"
+                class="flex items-center justify-center gap-1.5 rounded-full border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition-colors active:bg-slate-100"
+            >
+                <Copy class="h-4 w-4" />
+                Duplicate
             </Link>
             <button
                 type="button"

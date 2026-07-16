@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Insurance;
 use App\Models\PolicyType;
 use Telegram\Bot\Api;
 use Telegram\Bot\Objects\Message;
@@ -140,4 +141,16 @@ it('deletes a policy type', function () {
 
     $response->assertOk();
     expect(PolicyType::find($policyType->id))->toBeNull();
+});
+
+it('refuses to delete a policy type used by an existing policy', function () {
+    $policyType = PolicyType::factory()->create();
+    Insurance::factory()->create(['policy_type_id' => $policyType->id]);
+
+    authenticatePolicyTypeChat($this->chatId, $this->botToken);
+
+    $response = $this->deleteJson("/policy-types/{$policyType->id}");
+
+    $response->assertConflict();
+    expect(PolicyType::find($policyType->id))->not->toBeNull();
 });

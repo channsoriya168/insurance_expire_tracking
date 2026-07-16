@@ -18,7 +18,7 @@ class InsuranceNotificationResource extends JsonResource
             'id' => $this->insurance_id,
             'policy_no' => $this->insurance->policy_no,
             'insured_name' => $this->insurance->insured_name,
-            'insurance_company' => $this->insurance->insurance_company,
+            'insurance_company' => $this->insurance->insuranceCompany?->name,
             'expiry_date' => $this->expiry_date->format('Y-m-d'),
             'created_at' => $this->created_at->format('Y-m-d'),
             'read' => $this->read_at !== null,

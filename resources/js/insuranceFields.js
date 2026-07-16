@@ -1,6 +1,6 @@
 export const INSURANCE_FIELDS = [
     {
-        key: 'insurance_company',
+        key: 'insurance_company_id',
         label: 'Insurance Company',
         type: 'creatable-select',
         required: true,
@@ -11,7 +11,7 @@ export const INSURANCE_FIELDS = [
     },
     { key: 'insured_name', label: 'Insured Name', type: 'text', required: true, section: 'General Information', placeholder: 'Full name of the insured' },
     {
-        key: 'policy_type',
+        key: 'policy_type_id',
         label: 'Policy Type',
         type: 'creatable-select',
         required: true,

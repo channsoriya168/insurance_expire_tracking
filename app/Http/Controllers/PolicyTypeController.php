@@ -42,6 +42,12 @@ final class PolicyTypeController extends Controller
 
     public function destroy(PolicyType $policyType): JsonResponse
     {
+        if ($policyType->insurances()->exists()) {
+            return response()->json([
+                'message' => 'This policy type is used by existing policies and cannot be deleted.',
+            ], 409);
+        }
+
         $policyType->delete();
 
         return response()->json(['deleted' => true]);

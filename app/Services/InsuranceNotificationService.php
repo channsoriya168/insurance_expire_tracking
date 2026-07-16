@@ -113,7 +113,7 @@ final class InsuranceNotificationService
     public function paginatedNotifications(?string $expiry, bool $unreadOnly, int $perPage = 15): LengthAwarePaginator
     {
         return InsuranceNotification::query()
-            ->with('insurance')
+            ->with('insurance.insuranceCompany')
             ->when($expiry !== null, fn (Builder $q) => $q->where('bucket', $expiry))
             ->when($unreadOnly, fn (Builder $q) => $q->whereNull('read_at'))
             ->orderByDesc('created_at')

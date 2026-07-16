@@ -62,6 +62,7 @@ final class InsuranceService
     public function exportQuery(ExpiryDateRange $range): Builder
     {
         return Insurance::query()
+            ->with(['insuranceCompany', 'policyType'])
             ->when(
                 ! $range->isUnfiltered(),
                 fn (Builder $query) => $query->expiringBetween($range->from, $range->to),

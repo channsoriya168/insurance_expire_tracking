@@ -3,6 +3,8 @@
 namespace Database\Factories;
 
 use App\Models\Insurance;
+use App\Models\InsuranceCompany;
+use App\Models\PolicyType;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,14 +20,14 @@ class InsuranceFactory extends Factory
     public function definition(): array
     {
         return [
-            'insurance_company' => fake()->randomElement(['Lonpac', 'Infinity', 'Philip']),
+            'insurance_company_id' => fn () => InsuranceCompany::inRandomOrder()->value('id') ?? InsuranceCompany::factory()->create()->id,
             'policy_no' => strtoupper(fake()->unique()->bothify('Y##??########')),
             'contact_method' => fake()->randomElement(['Email', 'WhatsApp', 'WeChat', 'Telegram']),
             'contact_value' => fake()->safeEmail(),
             'contact_person' => fake()->name(),
             'insured_name' => fake()->company(),
             'expiry_date' => fake()->dateTimeBetween('-30 days', '+60 days'),
-            'policy_type' => fake()->randomElement(['Fire', 'PAR', 'GPA', 'Motor Ins', 'CAR']),
+            'policy_type_id' => fn () => PolicyType::inRandomOrder()->value('id') ?? PolicyType::factory()->create()->id,
             'sum_insured' => fake()->randomFloat(2, 1000, 500000),
             'premium' => fake()->randomFloat(2, 50, 20000),
             'net_premium' => fake()->randomFloat(2, 50, 20000),

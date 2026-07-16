@@ -62,7 +62,10 @@ function destroy(item) {
         return;
     }
 
-    deleteHttp.delete(`${props.url}/${item.id}`, { onSuccess: () => router.reload() });
+    deleteHttp.delete(`${props.url}/${item.id}`, {
+        onSuccess: () => router.reload(),
+        onHttpException: (response) => alert(response.data?.message ?? `"${item.name}" could not be deleted.`),
+    });
 }
 </script>
 

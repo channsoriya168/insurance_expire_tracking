@@ -42,6 +42,12 @@ final class InsuranceCompanyController extends Controller
 
     public function destroy(InsuranceCompany $insuranceCompany): JsonResponse
     {
+        if ($insuranceCompany->insurances()->exists()) {
+            return response()->json([
+                'message' => 'This insurance company is used by existing policies and cannot be deleted.',
+            ], 409);
+        }
+
         $insuranceCompany->delete();
 
         return response()->json(['deleted' => true]);

@@ -12,17 +12,18 @@ use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
-    'insurance_company',
+    'insurance_company_id',
     'policy_no',
     'contact_method',
     'contact_value',
     'contact_person',
     'insured_name',
     'expiry_date',
-    'policy_type',
+    'policy_type_id',
     'sum_insured',
     'premium',
     'net_premium',
@@ -100,5 +101,21 @@ class Insurance extends Model
     public function notification(): HasOne
     {
         return $this->hasOne(InsuranceNotification::class);
+    }
+
+    /**
+     * @return BelongsTo<InsuranceCompany, $this>
+     */
+    public function insuranceCompany(): BelongsTo
+    {
+        return $this->belongsTo(InsuranceCompany::class);
+    }
+
+    /**
+     * @return BelongsTo<PolicyType, $this>
+     */
+    public function policyType(): BelongsTo
+    {
+        return $this->belongsTo(PolicyType::class);
     }
 }

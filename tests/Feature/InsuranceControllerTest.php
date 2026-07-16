@@ -97,8 +97,8 @@ it('passes insurance company and policy type options to the create form', functi
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('Insurances/Create')
-            ->where('insuranceCompanies', ['Lonpac'])
-            ->where('policyTypes', ['Motor']));
+            ->where('insuranceCompanies.0.name', 'Lonpac')
+            ->where('policyTypes.0.name', 'Motor'));
 });
 
 it('creates a policy without notifying the telegram chat', function () {
@@ -128,14 +128,14 @@ it('rejects a policy with only the premium provided', function () {
     authenticate($this->chatId, $this->botToken);
 
     $response = $this->post('/insurances', [
-        'insurance_company' => '',
+        'insurance_company_id' => '',
         'policy_no' => '',
         'contact_method' => '',
         'contact_value' => '',
         'contact_person' => '',
         'insured_name' => '',
         'expiry_date' => '',
-        'policy_type' => '',
+        'policy_type_id' => '',
         'sum_insured' => '',
         'premium' => '500',
         'net_premium' => '',
@@ -151,8 +151,8 @@ it('rejects a policy with only the premium provided', function () {
     ]);
 
     $response->assertInvalid([
-        'insurance_company', 'policy_no', 'contact_method', 'contact_value', 'contact_person',
-        'insured_name', 'expiry_date', 'policy_type', 'sum_insured', 'net_premium',
+        'insurance_company_id', 'policy_no', 'contact_method', 'contact_value', 'contact_person',
+        'insured_name', 'expiry_date', 'policy_type_id', 'sum_insured', 'net_premium',
         'revised_sum_insured', 'revised_premium', 'revised_premium_rate',
     ]);
     expect(Insurance::where('premium', 500)->exists())->toBeFalse();
@@ -179,18 +179,29 @@ it('rejects invalid input without creating a policy', function () {
     expect(Insurance::where('policy_no', 'Y25TEST00099')->exists())->toBeFalse();
 });
 
+it('rejects a policy with an insurance company or policy type that does not exist', function () {
+    authenticate($this->chatId, $this->botToken);
+
+    $response = $this->post('/insurances', insuranceFormPayload(['insurance_company_id' => 999999]));
+
+    $response->assertInvalid(['insurance_company_id']);
+    expect(Insurance::where('policy_no', 'Y25TEST00099')->exists())->toBeFalse();
+});
+
 it('updates a policy field via the edit form', function () {
-    $insurance = Insurance::factory()->create(['insurance_company' => 'Lonpac']);
+    $lonpac = InsuranceCompany::factory()->create(['name' => 'Lonpac']);
+    $infinity = InsuranceCompany::factory()->create(['name' => 'Infinity']);
+    $insurance = Insurance::factory()->create(['insurance_company_id' => $lonpac->id]);
 
     authenticate($this->chatId, $this->botToken);
 
     $response = $this->put("/insurances/{$insurance->id}", insuranceFormPayload([
         'policy_no' => $insurance->policy_no,
-        'insurance_company' => 'Infinity',
+        'insurance_company_id' => $infinity->id,
     ]));
 
     $response->assertRedirect('/insurances');
-    expect($insurance->fresh()->insurance_company)->toBe('Infinity');
+    expect($insurance->fresh()->insuranceCompany->name)->toBe('Infinity');
 });
 
 it('quick-updates a policy payment status from the list', function () {
@@ -215,6 +226,72 @@ it('rejects an invalid payment status value', function () {
     expect($insurance->fresh()->payment_status)->toBe(PaymentStatus::Unpaid);
 });
 
+it('redirects to the launch page when duplicating without a session', function () {
+    $insurance = Insurance::factory()->create();
+
+    $this->get("/insurances/{$insurance->id}/duplicate")->assertRedirect('/telegram/launch');
+});
+
+it('pre-fills the create form from an existing policy when duplicating', function () {
+    $lonpac = InsuranceCompany::factory()->create(['name' => 'Lonpac']);
+
+    $insurance = Insurance::factory()->create([
+        'insurance_company_id' => $lonpac->id,
+        'policy_no' => 'Y25VC31008507',
+        'insured_name' => 'SIGLO (CAMBODIA) CO., LTD.',
+        'sum_insured' => '200000.00',
+        'expiry_date' => '2026-07-16',
+        'status' => 'Confirmed',
+        'payment_status' => 'Paid',
+        'confirmed_date' => '2025-08-01',
+        'payment_date' => '2025-08-05',
+        'policy_received_date' => '2025-08-10',
+    ]);
+
+    authenticate($this->chatId, $this->botToken);
+
+    $this->get("/insurances/{$insurance->id}/duplicate")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Insurances/Create')
+            ->where('duplicateFrom.insurance_company_id', $lonpac->id)
+            ->where('duplicateFrom.insured_name', 'SIGLO (CAMBODIA) CO., LTD.')
+            ->where('duplicateFrom.sum_insured', '200000.00')
+            ->missing('duplicateFrom.id')
+            ->missing('duplicateFrom.policy_no')
+            ->missing('duplicateFrom.expiry_date')
+            ->missing('duplicateFrom.status')
+            ->missing('duplicateFrom.payment_status')
+            ->missing('duplicateFrom.confirmed_date')
+            ->missing('duplicateFrom.payment_date')
+            ->missing('duplicateFrom.policy_received_date'));
+});
+
+it('creates a new policy from a duplicated one', function () {
+    $lonpac = InsuranceCompany::factory()->create(['name' => 'Lonpac']);
+
+    $original = Insurance::factory()->create([
+        'insurance_company_id' => $lonpac->id,
+        'insured_name' => 'SIGLO (CAMBODIA) CO., LTD.',
+    ]);
+
+    authenticate($this->chatId, $this->botToken);
+
+    $response = $this->post('/insurances', insuranceFormPayload([
+        'insurance_company_id' => $lonpac->id,
+        'insured_name' => 'SIGLO (CAMBODIA) CO., LTD.',
+        'policy_no' => 'Y26VC31008507',
+    ]));
+
+    $response->assertRedirect('/insurances');
+    $duplicate = Insurance::where('policy_no', 'Y26VC31008507')->first();
+    expect($duplicate)->not->toBeNull();
+    expect($duplicate->id)->not->toBe($original->id);
+    expect($duplicate->insuranceCompany->name)->toBe('Lonpac');
+    expect($duplicate->status)->toBe(PolicyStatus::Pending);
+    expect($duplicate->payment_status)->toBe(PaymentStatus::Unpaid);
+});
+
 it('filters the list by expiry and search', function () {
     Insurance::factory()->create(['expiry_date' => today(), 'policy_no' => 'Y25TEST00001']);
     Insurance::factory()->create(['expiry_date' => today()->addDays(10), 'policy_no' => 'Y25TEST00002']);
@@ -237,6 +314,21 @@ it('filters the list by expiry and search', function () {
     $this->get('/insurances?search=Y25TEST00003')
         ->assertInertia(fn ($page) => $page
             ->where('filters.search', 'Y25TEST00003')
+            ->where('insurances.total', 1));
+});
+
+it('filters the list by insurance company name', function () {
+    $lonpac = InsuranceCompany::factory()->create(['name' => 'Lonpac Insurance']);
+    $other = InsuranceCompany::factory()->create(['name' => 'Infinity Insurance']);
+    Insurance::factory()->create(['insurance_company_id' => $lonpac->id, 'policy_no' => 'Y25TEST00001']);
+    Insurance::factory()->create(['insurance_company_id' => $other->id, 'policy_no' => 'Y25TEST00002']);
+
+    authenticate($this->chatId, $this->botToken);
+
+    $this->get('/insurances?search=Lonpac')
+        ->assertInertia(fn ($page) => $page
+            ->where('insurances.data.0.policy_no', 'Y25TEST00001')
+            ->where('insurances.data.0.insurance_company', 'Lonpac Insurance')
             ->where('insurances.total', 1));
 });
 
@@ -289,14 +381,14 @@ it('deletes a policy without notifying the telegram chat', function () {
 function insuranceFormPayload(array $overrides = []): array
 {
     return array_merge([
-        'insurance_company' => 'Lonpac',
+        'insurance_company_id' => InsuranceCompany::firstOrCreate(['name' => 'Lonpac'])->id,
         'policy_no' => 'Y25TEST00099',
         'contact_method' => 'Email',
         'contact_value' => 'client@example.com',
         'contact_person' => 'John Client',
         'insured_name' => 'Test Garment Co., Ltd.',
         'expiry_date' => '2026-12-31',
-        'policy_type' => 'Fire',
+        'policy_type_id' => PolicyType::firstOrCreate(['name' => 'Fire'])->id,
         'sum_insured' => '100000',
         'premium' => '500',
         'net_premium' => '425',

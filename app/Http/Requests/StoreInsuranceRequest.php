@@ -33,14 +33,14 @@ class StoreInsuranceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'insurance_company' => ['required', 'string', 'max:255'],
+            'insurance_company_id' => ['required', 'integer', Rule::exists('insurance_companies', 'id')],
             'policy_no' => ['required', 'string', 'max:255', Rule::unique('insurances', 'policy_no')],
             'contact_method' => ['required', Rule::in(PolicyFieldSteps::contactMethods())],
             'contact_value' => ['required', 'string', 'max:255'],
             'contact_person' => ['required', 'string', 'max:255'],
             'insured_name' => ['required', 'string', 'max:255'],
             'expiry_date' => ['required', 'date'],
-            'policy_type' => ['required', 'string', 'max:255'],
+            'policy_type_id' => ['required', 'integer', Rule::exists('policy_types', 'id')],
             'sum_insured' => ['required', 'numeric', 'min:0'],
             'premium' => ['required', 'numeric', 'min:0'],
             'net_premium' => ['required', 'numeric', 'min:0'],

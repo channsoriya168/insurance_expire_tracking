@@ -4,15 +4,18 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import InsuranceForm from '@/Components/InsuranceForm.vue';
 import { INSURANCE_FIELDS } from '@/insuranceFields';
 
-defineProps({
+const props = defineProps({
     contactMethods: { type: Array, required: true },
     statuses: { type: Array, required: true },
     paymentStatuses: { type: Array, required: true },
     insuranceCompanies: { type: Array, required: true },
     policyTypes: { type: Array, required: true },
+    duplicateFrom: { type: Object, default: null },
 });
 
-const form = useForm(Object.fromEntries(INSURANCE_FIELDS.map((field) => [field.key, ''])));
+const form = useForm(
+    Object.fromEntries(INSURANCE_FIELDS.map((field) => [field.key, props.duplicateFrom?.[field.key] ?? ''])),
+);
 
 function submit() {
     form.post('/insurances');
@@ -20,7 +23,7 @@ function submit() {
 </script>
 
 <template>
-    <AppLayout title="Add Insurance Policy" back-href="/insurances">
+    <AppLayout :title="duplicateFrom ? 'Duplicate Insurance Policy' : 'Add Insurance Policy'" back-href="/insurances">
         <InsuranceForm
             :form="form"
             :contact-methods="contactMethods"

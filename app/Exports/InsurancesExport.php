@@ -66,14 +66,14 @@ final class InsurancesExport implements FromQuery, ShouldAutoSize, WithHeadings,
     public function map($insurance): array
     {
         return [
-            $insurance->insurance_company,
+            $insurance->insuranceCompany?->name,
             $insurance->policy_no,
             $insurance->contact_method?->value,
             $insurance->contact_value,
             $insurance->contact_person,
             $insurance->insured_name,
             $insurance->expiry_date?->format('Y-m-d'),
-            $insurance->policy_type,
+            $insurance->policyType?->name,
             $insurance->sum_insured,
             $insurance->premium,
             $insurance->net_premium,

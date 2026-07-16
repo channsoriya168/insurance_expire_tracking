@@ -36,13 +36,14 @@ final class InsuranceController extends Controller
         $filters = array_filter(['search' => $search, 'expiry' => $expiry]);
 
         $insurances = QueryBuilder::for(Insurance::class, new Request(['filter' => $filters]))
-            ->select(['id', 'policy_no', 'insurance_company', 'insured_name', 'policy_type', 'status', 'payment_status', 'expiry_date', 'created_at'])
+            ->select(['id', 'policy_no', 'insurance_company_id', 'insured_name', 'policy_type_id', 'status', 'payment_status', 'expiry_date', 'created_at'])
+            ->with(['insuranceCompany:id,name', 'policyType:id,name'])
             ->allowedFilters(
                 AllowedFilter::callback('search', function (Builder $query, string $value): void {
                     $query->where(function (Builder $query) use ($value): void {
                         $query->where('policy_no', 'like', "%{$value}%")
                             ->orWhere('insured_name', 'like', "%{$value}%")
-                            ->orWhere('insurance_company', 'like', "%{$value}%");
+                            ->orWhereHas('insuranceCompany', fn (Builder $query) => $query->where('name', 'like', "%{$value}%"));
                     });
                 }),
                 AllowedFilter::callback('expiry', function (Builder $query, string $value): void {
@@ -65,9 +66,9 @@ final class InsuranceController extends Controller
         $insurances->through(fn (Insurance $insurance): array => [
             'id' => $insurance->id,
             'policy_no' => $insurance->policy_no,
-            'insurance_company' => $insurance->insurance_company,
+            'insurance_company' => $insurance->insuranceCompany?->name,
             'insured_name' => $insurance->insured_name,
-            'policy_type' => $insurance->policy_type,
+            'policy_type' => $insurance->policyType?->name,
             'status' => $insurance->status,
             'payment_status' => $insurance->payment_status,
             'expiry_date' => $insurance->expiry_date?->format('Y-m-d'),
@@ -97,12 +98,29 @@ final class InsuranceController extends Controller
 
     public function create(): Response
     {
+        return Inertia::render('Insurances/Create', $this->createFormProps());
+    }
+
+    /**
+     * Pre-fills the create form from an existing policy for renewals: everything
+     * carries over except the unique policy number, the expiry date (the whole
+     * point of a renewal is a new expiry), and the fields tied to the old policy
+     * period's lifecycle (status, payment status, confirmed/payment/received
+     * dates), which reset to their normal create-time defaults.
+     */
+    public function duplicate(Insurance $insurance): Response
+    {
+        $duplicateFrom = collect($this->toFormArray($insurance))
+            ->except([
+                'id', 'policy_no', 'expiry_date', 'status', 'payment_status',
+                'confirmed_date', 'payment_date', 'policy_received_date',
+                'insurance_company', 'policy_type',
+            ])
+            ->all();
+
         return Inertia::render('Insurances/Create', [
-            'contactMethods' => PolicyFieldSteps::contactMethods(),
-            'statuses' => PolicyFieldSteps::statuses(),
-            'paymentStatuses' => PolicyFieldSteps::paymentStatuses(),
-            'insuranceCompanies' => InsuranceCompany::orderBy('name')->pluck('name'),
-            'policyTypes' => PolicyType::orderBy('name')->pluck('name'),
+            ...$this->createFormProps(),
+            'duplicateFrom' => $duplicateFrom,
         ]);
     }
 
@@ -117,11 +135,7 @@ final class InsuranceController extends Controller
     {
         return Inertia::render('Insurances/Edit', [
             'insurance' => $this->toFormArray($insurance),
-            'contactMethods' => PolicyFieldSteps::contactMethods(),
-            'statuses' => PolicyFieldSteps::statuses(),
-            'paymentStatuses' => PolicyFieldSteps::paymentStatuses(),
-            'insuranceCompanies' => InsuranceCompany::orderBy('name')->pluck('name'),
-            'policyTypes' => PolicyType::orderBy('name')->pluck('name'),
+            ...$this->createFormProps(),
         ]);
     }
 
@@ -166,9 +180,31 @@ final class InsuranceController extends Controller
     /**
      * @return array<string, mixed>
      */
+    private function createFormProps(): array
+    {
+        return [
+            'contactMethods' => PolicyFieldSteps::contactMethods(),
+            'statuses' => PolicyFieldSteps::statuses(),
+            'paymentStatuses' => PolicyFieldSteps::paymentStatuses(),
+            'insuranceCompanies' => InsuranceCompany::orderBy('name')->get(['id', 'name']),
+            'policyTypes' => PolicyType::orderBy('name')->get(['id', 'name']),
+        ];
+    }
+
+    /**
+     * Returns both the raw foreign key ids (for seeding the edit/duplicate
+     * form's selects) and the related names under `insurance_company`/
+     * `policy_type` (for the Show page's plain-text display).
+     *
+     * @return array<string, mixed>
+     */
     private function toFormArray(Insurance $insurance): array
     {
+        $insurance->loadMissing(['insuranceCompany', 'policyType']);
+
         $fields = $insurance->only(['id', ...PolicyFieldSteps::ORDER]);
+        $fields['insurance_company'] = $insurance->insuranceCompany?->name;
+        $fields['policy_type'] = $insurance->policyType?->name;
 
         foreach (['expiry_date', 'confirmed_date', 'payment_date', 'policy_received_date'] as $dateField) {
             $fields[$dateField] = $insurance->{$dateField}?->format('Y-m-d');

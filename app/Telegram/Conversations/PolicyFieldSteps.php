@@ -17,14 +17,14 @@ final class PolicyFieldSteps
      * @var list<string>
      */
     public const array ORDER = [
-        'insurance_company',
+        'insurance_company_id',
         'policy_no',
         'contact_method',
         'contact_value',
         'contact_person',
         'insured_name',
         'expiry_date',
-        'policy_type',
+        'policy_type_id',
         'sum_insured',
         'premium',
         'net_premium',

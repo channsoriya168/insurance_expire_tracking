@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 const CREATE_OPTION = '__create__';
 
 const props = defineProps({
-    modelValue: { type: String, default: '' },
+    modelValue: { type: [String, Number], default: '' },
     options: { type: Array, required: true },
     placeholder: { type: String, default: 'Select an option' },
     label: { type: String, required: true },
@@ -31,18 +31,12 @@ watch(
     },
 );
 
-const selectableOptions = computed(() =>
-    props.modelValue && !localOptions.value.includes(props.modelValue)
-        ? [...localOptions.value, props.modelValue]
-        : localOptions.value,
-);
-
 const dialogOpen = ref(false);
 const newName = ref('');
 const http = useHttp({ name: '' });
 
 const selectValue = computed({
-    get: () => props.modelValue,
+    get: () => (props.modelValue ? String(props.modelValue) : ''),
     set: (value) => {
         if (value === CREATE_OPTION) {
             newName.value = '';
@@ -59,11 +53,11 @@ function createOption() {
     http.name = newName.value;
     http.post(props.createUrl, {
         onSuccess: (data) => {
-            if (!localOptions.value.includes(data.name)) {
-                localOptions.value.push(data.name);
+            if (!localOptions.value.some((option) => option.id === data.id)) {
+                localOptions.value.push(data);
             }
 
-            emit('update:modelValue', data.name);
+            emit('update:modelValue', String(data.id));
             dialogOpen.value = false;
         },
     });
@@ -76,10 +70,10 @@ function createOption() {
             <SelectValue :placeholder="placeholder" />
         </SelectTrigger>
         <SelectContent>
-            <SelectItem v-for="option in selectableOptions" :key="option" :value="option">
-                {{ option }}
+            <SelectItem v-for="option in localOptions" :key="option.id" :value="String(option.id)">
+                {{ option.name }}
             </SelectItem>
-            <SelectSeparator v-if="selectableOptions.length" />
+            <SelectSeparator v-if="localOptions.length" />
             <SelectItem :value="CREATE_OPTION" class="text-brand-700 font-medium">
                 <PlusIcon class="size-4" />
                 Add new {{ label }}
