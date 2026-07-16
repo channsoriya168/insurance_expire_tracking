@@ -165,4 +165,18 @@ final class InsuranceNotificationService
             $notification->save();
         }
     }
+
+    /**
+     * Bulk-mark the given policies' notifications as read, for the
+     * notifications screen's multi-select "mark as read" action.
+     *
+     * @param  list<int>  $insuranceIds
+     */
+    public function markManyRead(array $insuranceIds): void
+    {
+        InsuranceNotification::query()
+            ->whereIn('insurance_id', $insuranceIds)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+    }
 }

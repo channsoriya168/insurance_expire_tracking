@@ -1,4 +1,4 @@
-<script setup>
+ <script setup>
 import { Link, router } from '@inertiajs/vue3';
 import { watchDebounced } from '@vueuse/core';
 import { ref } from 'vue';
@@ -136,7 +136,7 @@ function updatePaymentStatus(insurance, paymentStatus) {
                         type="search"
                         autofocus
                         placeholder="Search policy no, insured name, company"
-                        class="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-10 pr-9 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15"
+                        class="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-10 pr-9 text-base text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15 md:text-sm"
                     />
                     <button
                         v-if="search"

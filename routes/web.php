@@ -19,6 +19,7 @@ Route::post('/telegram/auth', TelegramAuthController::class)->name('telegram.aut
 
 Route::middleware('telegram.chat')->group(function () {
     Route::get('insurances-notifications', [InsuranceNotificationController::class, 'index'])->name('insurances.notifications');
+    Route::patch('insurances-notifications/read', [InsuranceNotificationController::class, 'markManyRead'])->name('insurances.notifications.read.many');
     Route::patch('insurances-notifications/{insurance}/read', [InsuranceNotificationController::class, 'toggleRead'])->name('insurances.notifications.read');
     Route::resource('insurances', InsuranceController::class);
     Route::get('insurances/{insurance}/duplicate', [InsuranceController::class, 'duplicate'])->name('insurances.duplicate');

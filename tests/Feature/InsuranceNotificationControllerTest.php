@@ -125,3 +125,28 @@ it('toggles a policy notification read state', function () {
     $this->patch("/insurances-notifications/{$insurance->id}/read")->assertRedirect();
     expect($insurance->notification->fresh()->read_at)->toBeNull();
 });
+
+it('bulk-marks the selected policies as read', function () {
+    $first = Insurance::factory()->expiringInDays(10)->create();
+    $second = Insurance::factory()->expiringInDays(20)->create();
+    $untouched = Insurance::factory()->expiringInDays(30)->create();
+
+    $this->patch('/insurances-notifications/read', ['ids' => [$first->id, $second->id]])->assertRedirect();
+
+    expect($first->notification->fresh()->read_at)->not->toBeNull();
+    expect($second->notification->fresh()->read_at)->not->toBeNull();
+    expect($untouched->notification->fresh()->read_at)->toBeNull();
+});
+
+it('leaves an already-read policy alone when bulk-marking as read', function () {
+    $insurance = Insurance::factory()->expiringInDays(10)->create();
+    $insurance->notification->update(['read_at' => '2026-01-01 00:00:00']);
+
+    $this->patch('/insurances-notifications/read', ['ids' => [$insurance->id]])->assertRedirect();
+
+    expect($insurance->notification->fresh()->read_at->toDateTimeString())->toBe('2026-01-01 00:00:00');
+});
+
+it('requires an ids array to bulk-mark policies as read', function () {
+    $this->patch('/insurances-notifications/read', [])->assertInvalid(['ids']);
+});

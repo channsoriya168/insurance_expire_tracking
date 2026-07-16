@@ -1,6 +1,6 @@
 <script setup>
 import { InfiniteScroll, router } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Icon from '@/Components/Icon.vue';
 import NotificationCard from '@/Components/NotificationCard.vue';
@@ -85,21 +85,84 @@ function toggleRead(policy) {
         { preserveScroll: true, preserveState: true },
     );
 }
+
+const selectMode = ref(false);
+const selectedIds = ref(new Set());
+
+function toggleSelectMode() {
+    selectMode.value = !selectMode.value;
+    selectedIds.value = new Set();
+}
+
+function toggleSelect(policy) {
+    const next = new Set(selectedIds.value);
+
+    if (next.has(policy.id)) {
+        next.delete(policy.id);
+    } else {
+        next.add(policy.id);
+    }
+
+    selectedIds.value = next;
+}
+
+const loadedIds = computed(() => props.notifications.data.map((policy) => policy.id));
+const allLoadedSelected = computed(() => loadedIds.value.length > 0 && loadedIds.value.every((id) => selectedIds.value.has(id)));
+
+function toggleSelectAll() {
+    selectedIds.value = allLoadedSelected.value ? new Set() : new Set(loadedIds.value);
+}
+
+function markSelectedRead() {
+    router.patch(
+        '/insurances-notifications/read',
+        { ids: Array.from(selectedIds.value) },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                selectMode.value = false;
+                selectedIds.value = new Set();
+            },
+        },
+    );
+}
+
+// Loading more items via infinite scroll shouldn't drop selections the user
+// already made on the earlier page.
+watch(loadedIds, (ids) => {
+    const idSet = new Set(ids);
+    selectedIds.value = new Set([...selectedIds.value].filter((id) => idSet.has(id)));
+});
 </script>
 
 <template>
     <AppLayout title="Notifications" back-href="/insurances" hide-notifications>
         <div class="space-y-6">
             <div
-                v-if="formattedNotificationTime"
+                v-if="formattedNotificationTime && !selectMode"
                 class="flex items-center gap-2.5 rounded-2xl border border-brand-100 bg-brand-50 px-4 py-3 text-sm text-brand-700"
             >
                 <Icon name="bell" class="h-4.5 w-4.5 shrink-0" />
                 <p>This list matches the daily Telegram alert sent at <span class="font-semibold">{{ formattedNotificationTime }}</span>.</p>
             </div>
 
-            <NotificationTabs v-if="!isEmpty" :model-value="activeTab" :tabs="tabs" @update:model-value="selectTab" />
+            <div v-if="!isEmpty" class="flex items-center justify-between gap-2">
+                <NotificationTabs v-if="!selectMode" :model-value="activeTab" :tabs="tabs" @update:model-value="selectTab" />
 
+                <label v-else class="flex items-center gap-2 text-sm font-medium text-slate-600">
+                    <input type="checkbox" class="h-4 w-4 rounded accent-brand-600" :checked="allLoadedSelected" @change="toggleSelectAll" />
+                    Select all ({{ selectedIds.size }} selected)
+                </label>
+
+                <button
+                    type="button"
+                    class="shrink-0 text-xs font-semibold text-brand-700 active:text-brand-900"
+                    @click="toggleSelectMode"
+                >
+                    {{ selectMode ? 'Cancel' : 'Select' }}
+                </button>
+            </div>
 
             <InfiniteScroll v-if="!isFilteredEmpty" data="notifications">
                 <div class="space-y-3">
@@ -111,7 +174,14 @@ function toggleRead(policy) {
                             {{ row.label }}
                         </h2>
 
-                        <NotificationCard v-else :policy="row.policy" @toggle-read="toggleRead" />
+                        <NotificationCard
+                            v-else
+                            :policy="row.policy"
+                            :select-mode="selectMode"
+                            :selected="selectedIds.has(row.policy.id)"
+                            @toggle-read="toggleRead"
+                            @toggle-select="toggleSelect"
+                        />
                     </template>
                 </div>
             </InfiniteScroll>
@@ -130,6 +200,23 @@ function toggleRead(policy) {
             >
                 <Icon name="check-circle" class="h-8 w-8 text-emerald-500" />
                 <p class="text-sm text-slate-400">No policies match this filter.</p>
+            </div>
+        </div>
+
+        <div
+            v-if="selectMode && selectedIds.size > 0"
+            class="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white p-4 shadow-lg shadow-slate-900/10"
+        >
+            <div class="mx-auto flex max-w-2xl items-center justify-between gap-3">
+                <p class="text-sm font-medium text-slate-600">{{ selectedIds.size }} selected</p>
+                <button
+                    type="button"
+                    class="flex items-center gap-1.5 rounded-full bg-brand-900 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-brand-900/25 transition-transform active:scale-[0.98]"
+                    @click="markSelectedRead"
+                >
+                    <Icon name="check-circle" class="h-4 w-4" />
+                    Mark as read
+                </button>
             </div>
         </div>
     </AppLayout>

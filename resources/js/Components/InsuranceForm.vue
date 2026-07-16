@@ -59,7 +59,9 @@ const sections = computed(() => {
 });
 
 const fieldClass =
-    'mt-1.5 h-auto w-full rounded-xl border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[15px] text-slate-900 focus-visible:border-brand-500 focus-visible:bg-white focus-visible:ring-brand-500/15';
+    // text-base (16px) avoids iOS Safari auto-zooming the page when a field is
+    // focused - anything smaller triggers it, and the zoom doesn't always reset.
+    'mt-1.5 h-auto w-full rounded-xl border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base text-slate-900 focus-visible:border-brand-500 focus-visible:bg-white focus-visible:ring-brand-500/15 md:text-[15px]';
 
 function inputClass(field) {
     return field.type === 'date' ? `${fieldClass} appearance-none` : fieldClass;

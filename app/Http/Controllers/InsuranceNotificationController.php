@@ -38,4 +38,13 @@ final class InsuranceNotificationController extends Controller
 
         return to_route('insurances.notifications');
     }
+
+    public function markManyRead(Request $request): RedirectResponse
+    {
+        $ids = $request->validate(['ids' => ['required', 'array'], 'ids.*' => ['integer']])['ids'];
+
+        $this->notifications->markManyRead($ids);
+
+        return back();
+    }
 }
