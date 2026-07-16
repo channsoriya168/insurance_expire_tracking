@@ -14,6 +14,7 @@ use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -35,7 +36,7 @@ final class InsuranceController extends Controller
         $filters = array_filter(['search' => $search, 'expiry' => $expiry]);
 
         $insurances = QueryBuilder::for(Insurance::class, new Request(['filter' => $filters]))
-            ->select(['id', 'policy_no', 'insurance_company', 'insured_name', 'policy_type', 'status', 'expiry_date', 'created_at'])
+            ->select(['id', 'policy_no', 'insurance_company', 'insured_name', 'policy_type', 'status', 'payment_status', 'expiry_date', 'created_at'])
             ->allowedFilters(
                 AllowedFilter::callback('search', function (Builder $query, string $value): void {
                     $query->where(function (Builder $query) use ($value): void {
@@ -68,6 +69,7 @@ final class InsuranceController extends Controller
             'insured_name' => $insurance->insured_name,
             'policy_type' => $insurance->policy_type,
             'status' => $insurance->status,
+            'payment_status' => $insurance->payment_status,
             'expiry_date' => $insurance->expiry_date?->format('Y-m-d'),
         ]);
 
@@ -136,6 +138,17 @@ final class InsuranceController extends Controller
         $this->insurances->delete($insurance);
 
         return to_route('insurances.index')->with('status', "Policy {$policyNo} deleted.");
+    }
+
+    public function updatePaymentStatus(Request $request, Insurance $insurance): RedirectResponse
+    {
+        $data = $request->validate([
+            'payment_status' => ['required', Rule::in(PolicyFieldSteps::paymentStatuses())],
+        ]);
+
+        $this->insurances->update($insurance, $data);
+
+        return back();
     }
 
     /**

@@ -6,7 +6,10 @@ import { ArrowDownNarrowWide, ArrowUpNarrowWide, Plus, Search, X } from '@lucide
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Icon from '@/Components/Icon.vue';
 import ExpiryTabs from '@/Components/ExpiryTabs.vue';
+import { Popover, PopoverContent, PopoverTrigger } from '@/Components/ui/popover';
 import { expiryStatus as expiryInfo } from '@/expiryStatus';
+
+const PAYMENT_STATUSES = ['Unpaid', 'Paid', '30% Self Insured'];
 
 const props = defineProps({
     insurances: { type: Object, required: true },
@@ -55,22 +58,34 @@ function destroy(insurance) {
     router.delete(`/insurances/${insurance.id}`);
 }
 
-function statusBadgeClass(value) {
-    const normalized = (value || 'Pending').toLowerCase();
+function paymentStatusBadgeClass(value) {
+    const normalized = value || 'Unpaid';
 
-    if (['active', 'confirmed', 'approved'].includes(normalized)) {
+    if (normalized === 'Paid') {
         return 'bg-emerald-50 text-emerald-600';
     }
 
-    if (normalized === 'pending') {
-        return 'bg-amber-50 text-amber-600';
-    }
-
-    if (['cancelled', 'canceled', 'rejected'].includes(normalized)) {
+    if (normalized === 'Unpaid') {
         return 'bg-red-50 text-red-500';
     }
 
-    return 'bg-slate-100 text-slate-500';
+    return 'bg-amber-50 text-amber-600';
+}
+
+const openPaymentStatusId = ref(null);
+
+function updatePaymentStatus(insurance, paymentStatus) {
+    openPaymentStatusId.value = null;
+
+    if (paymentStatus === (insurance.payment_status || 'Unpaid')) {
+        return;
+    }
+
+    router.patch(
+        `/insurances/${insurance.id}/payment-status`,
+        { payment_status: paymentStatus },
+        { preserveScroll: true, preserveState: true, only: ['insurances'] },
+    );
 }
 </script>
 
@@ -164,9 +179,36 @@ function statusBadgeClass(value) {
                 <div class="p-4 pl-5">
                     <div class="flex items-start justify-between gap-2">
                         <p class="truncate text-base font-semibold tracking-tight text-slate-900">{{ insurance.policy_no }}</p>
-                        <span class="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium" :class="statusBadgeClass(insurance.status)">
-                            {{ insurance.status || 'Pending' }}
-                        </span>
+                        <Popover
+                            :open="openPaymentStatusId === insurance.id"
+                            @update:open="(value) => (openPaymentStatusId = value ? insurance.id : null)"
+                        >
+                            <PopoverTrigger as-child>
+                                <button
+                                    type="button"
+                                    class="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium transition-transform active:scale-95"
+                                    :class="paymentStatusBadgeClass(insurance.payment_status)"
+                                >
+                                    {{ insurance.payment_status || 'Unpaid' }}
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent class="w-44 gap-0.5 p-1.5" align="end">
+                                <button
+                                    v-for="option in PAYMENT_STATUSES"
+                                    :key="option"
+                                    type="button"
+                                    class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 transition-colors active:bg-slate-100"
+                                    @click="updatePaymentStatus(insurance, option)"
+                                >
+                                    {{ option }}
+                                    <Icon
+                                        v-if="option === (insurance.payment_status || 'Unpaid')"
+                                        name="check-circle"
+                                        class="h-4 w-4 shrink-0 text-brand-700"
+                                    />
+                                </button>
+                            </PopoverContent>
+                        </Popover>
                     </div>
 
                     <p class="mt-1 flex items-center gap-1.5 text-sm text-slate-500">

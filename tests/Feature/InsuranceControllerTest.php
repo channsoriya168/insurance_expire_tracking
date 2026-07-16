@@ -193,6 +193,28 @@ it('updates a policy field via the edit form', function () {
     expect($insurance->fresh()->insurance_company)->toBe('Infinity');
 });
 
+it('quick-updates a policy payment status from the list', function () {
+    $insurance = Insurance::factory()->create(['payment_status' => 'Unpaid']);
+
+    authenticate($this->chatId, $this->botToken);
+
+    $response = $this->patch("/insurances/{$insurance->id}/payment-status", ['payment_status' => 'Paid']);
+
+    $response->assertRedirect();
+    expect($insurance->fresh()->payment_status)->toBe(PaymentStatus::Paid);
+});
+
+it('rejects an invalid payment status value', function () {
+    $insurance = Insurance::factory()->create(['payment_status' => 'Unpaid']);
+
+    authenticate($this->chatId, $this->botToken);
+
+    $response = $this->patch("/insurances/{$insurance->id}/payment-status", ['payment_status' => 'Not A Status']);
+
+    $response->assertInvalid(['payment_status']);
+    expect($insurance->fresh()->payment_status)->toBe(PaymentStatus::Unpaid);
+});
+
 it('filters the list by expiry and search', function () {
     Insurance::factory()->create(['expiry_date' => today(), 'policy_no' => 'Y25TEST00001']);
     Insurance::factory()->create(['expiry_date' => today()->addDays(10), 'policy_no' => 'Y25TEST00002']);

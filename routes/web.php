@@ -21,6 +21,7 @@ Route::middleware('telegram.chat')->group(function () {
     Route::get('insurances-notifications', [InsuranceNotificationController::class, 'index'])->name('insurances.notifications');
     Route::patch('insurances-notifications/{insurance}/read', [InsuranceNotificationController::class, 'toggleRead'])->name('insurances.notifications.read');
     Route::resource('insurances', InsuranceController::class);
+    Route::patch('insurances/{insurance}/payment-status', [InsuranceController::class, 'updatePaymentStatus'])->name('insurances.payment-status.update');
 
     Route::get('settings', [SettingsController::class, 'index'])->name('settings');
 
