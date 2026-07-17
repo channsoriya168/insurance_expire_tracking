@@ -46,7 +46,11 @@ function displayValue(field) {
               ? props.insurance.policy_type
               : props.insurance[field.key];
 
-    return value === null || value === undefined || value === '' ? '—' : value;
+    if (value === null || value === undefined || value === '') {
+        return '—';
+    }
+
+    return field.key === 'revised_premium_rate' ? `${parseFloat(value)}%` : value;
 }
 
 function destroy() {
