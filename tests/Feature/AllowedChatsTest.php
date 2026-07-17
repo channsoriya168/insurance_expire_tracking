@@ -43,3 +43,9 @@ it('excludes pending and rejected telegram access requests', function () {
     expect(AllowedChats::contains(444))->toBeFalse();
     expect(AllowedChats::contains(555))->toBeFalse();
 });
+
+it('lets any chat in when open access is enabled', function () {
+    config(['insurance-bot.allowed_chat_ids' => [], 'insurance-bot.open_access' => true]);
+
+    expect(AllowedChats::contains(999999))->toBeTrue();
+});

@@ -26,6 +26,10 @@ final class AllowedChats
 
     public static function contains(int|string $chatId): bool
     {
+        if (config('insurance-bot.open_access')) {
+            return true;
+        }
+
         return in_array((int) $chatId, self::ids(), true);
     }
 }

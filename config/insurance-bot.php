@@ -18,6 +18,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Open Access (testing only)
+    |--------------------------------------------------------------------------
+    |
+    | When true, every chat is treated as allowed and the approval workflow
+    | is skipped entirely - useful for demos/testing. Leave false to keep the
+    | allow-list + approval flow enforced. Set via TELEGRAM_OPEN_ACCESS.
+    |
+    */
+    'open_access' => env('TELEGRAM_OPEN_ACCESS', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Expiry Notification Thresholds
     |--------------------------------------------------------------------------
     |
