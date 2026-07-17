@@ -6,6 +6,7 @@ use App\Http\Controllers\InsuranceFormController;
 use App\Http\Controllers\InsuranceNotificationController;
 use App\Http\Controllers\PolicyTypeController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\TelegramAccessRequestController;
 use App\Http\Controllers\TelegramAuthController;
 use App\Http\Controllers\TelegramLaunchController;
 use Illuminate\Support\Facades\Route;
@@ -36,6 +37,10 @@ Route::middleware('telegram.chat')->group(function () {
     Route::post('policy-types', [PolicyTypeController::class, 'store'])->name('policy-types.store');
     Route::patch('policy-types/{policyType}', [PolicyTypeController::class, 'update'])->name('policy-types.update');
     Route::delete('policy-types/{policyType}', [PolicyTypeController::class, 'destroy'])->name('policy-types.destroy');
+
+    Route::get('telegram-access', [TelegramAccessRequestController::class, 'index'])->name('telegram-access.index');
+    Route::patch('telegram-access/{telegramAccessRequest}/approve', [TelegramAccessRequestController::class, 'approve'])->name('telegram-access.approve');
+    Route::patch('telegram-access/{telegramAccessRequest}/reject', [TelegramAccessRequestController::class, 'reject'])->name('telegram-access.reject');
 });
 
 Route::middleware('signed')->prefix('forms/insurances')->name('forms.insurances.')->group(function () {

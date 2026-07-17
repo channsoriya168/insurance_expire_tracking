@@ -20,17 +20,17 @@ final class TelegramWebhookController extends Controller
             return response()->noContent();
         }
 
+        if ($update->hasCommand()) {
+            $telegram->processCommand($update);
+
+            return response()->noContent();
+        }
+
         if (! AllowedChats::contains($chatId)) {
             $telegram->sendMessage([
                 'chat_id' => $chatId,
                 'text' => 'You are not authorized to use this bot.',
             ]);
-
-            return response()->noContent();
-        }
-
-        if ($update->hasCommand()) {
-            $telegram->processCommand($update);
         }
 
         return response()->noContent();

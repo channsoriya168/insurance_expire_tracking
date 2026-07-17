@@ -16,15 +16,29 @@ function telegramUpdatePayload(int $chatId, string $text, bool $isCommand = fals
     ];
 }
 
-it('rejects updates from a chat id that is not allowed', function () {
+it('forwards a command update to Telegram even from a chat id that is not allowed', function () {
     config(['insurance-bot.allowed_chat_ids' => [111]]);
 
     $this->mock(Api::class, function ($mock) {
+        $mock->shouldReceive('processCommand')->once();
+        $mock->shouldNotReceive('sendMessage');
+    });
+
+    $response = $this->postJson('/api/telegram/webhook', telegramUpdatePayload(999, '/start', isCommand: true));
+
+    $response->assertNoContent();
+});
+
+it('rejects non-command messages from a chat id that is not allowed', function () {
+    config(['insurance-bot.allowed_chat_ids' => [111]]);
+
+    $this->mock(Api::class, function ($mock) {
+        $mock->shouldNotReceive('processCommand');
         $mock->shouldReceive('sendMessage')->once()
             ->withArgs(fn (array $params) => $params['chat_id'] === 999 && str_contains($params['text'], 'not authorized'));
     });
 
-    $response = $this->postJson('/api/telegram/webhook', telegramUpdatePayload(999, '/start', isCommand: true));
+    $response = $this->postJson('/api/telegram/webhook', telegramUpdatePayload(999, 'random text'));
 
     $response->assertNoContent();
 });
