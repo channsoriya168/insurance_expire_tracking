@@ -317,7 +317,7 @@ it('filters the list by expiry and search', function () {
             ->where('insurances.total', 1));
 });
 
-it('sorts the list by expiry date, soonest first by default', function () {
+it('sorts the list by expiry date, latest first by default', function () {
     Insurance::factory()->create(['expiry_date' => today()->addDays(90), 'policy_no' => 'Y25TEST00001']);
     Insurance::factory()->create(['expiry_date' => today()->addDays(10), 'policy_no' => 'Y25TEST00002']);
     Insurance::factory()->create(['expiry_date' => today()->addDays(30), 'policy_no' => 'Y25TEST00003']);
@@ -326,17 +326,17 @@ it('sorts the list by expiry date, soonest first by default', function () {
 
     $this->get('/insurances')
         ->assertInertia(fn ($page) => $page
-            ->where('filters.sort', 'asc')
-            ->where('insurances.data.0.policy_no', 'Y25TEST00002')
-            ->where('insurances.data.1.policy_no', 'Y25TEST00003')
-            ->where('insurances.data.2.policy_no', 'Y25TEST00001'));
-
-    $this->get('/insurances?sort=desc')
-        ->assertInertia(fn ($page) => $page
             ->where('filters.sort', 'desc')
             ->where('insurances.data.0.policy_no', 'Y25TEST00001')
             ->where('insurances.data.1.policy_no', 'Y25TEST00003')
             ->where('insurances.data.2.policy_no', 'Y25TEST00002'));
+
+    $this->get('/insurances?sort=asc')
+        ->assertInertia(fn ($page) => $page
+            ->where('filters.sort', 'asc')
+            ->where('insurances.data.0.policy_no', 'Y25TEST00002')
+            ->where('insurances.data.1.policy_no', 'Y25TEST00003')
+            ->where('insurances.data.2.policy_no', 'Y25TEST00001'));
 });
 
 it('filters the list by insurance company name', function () {

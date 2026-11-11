@@ -19,7 +19,7 @@ const props = defineProps({
 
 const search = ref(props.filters.search ?? '');
 const expiry = ref(props.filters.expiry ?? '');
-const sort = ref(props.filters.sort ?? 'asc');
+const sort = ref(props.filters.sort ?? 'desc');
 const showSearch = ref(!!search.value);
 
 function applyFilters() {
@@ -28,7 +28,7 @@ function applyFilters() {
         {
             search: search.value || undefined,
             expiry: expiry.value || undefined,
-            sort: sort.value === 'desc' ? 'desc' : undefined,
+            sort: sort.value === 'asc' ? 'asc' : undefined,
         },
         { preserveState: true, replace: true },
     );
