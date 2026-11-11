@@ -19,7 +19,7 @@ const props = defineProps({
 
 const search = ref(props.filters.search ?? '');
 const expiry = ref(props.filters.expiry ?? '');
-const sort = ref(props.filters.sort ?? 'desc');
+const sort = ref(props.filters.sort ?? 'asc');
 const showSearch = ref(!!search.value);
 
 function applyFilters() {
@@ -28,7 +28,7 @@ function applyFilters() {
         {
             search: search.value || undefined,
             expiry: expiry.value || undefined,
-            sort: sort.value === 'asc' ? 'asc' : undefined,
+            sort: sort.value === 'desc' ? 'desc' : undefined,
         },
         { preserveState: true, replace: true },
     );
@@ -201,7 +201,7 @@ function updatePaymentStatus(insurance, paymentStatus) {
                 @click="toggleSort"
             >
                 <component :is="sort === 'desc' ? ArrowDownNarrowWide : ArrowUpNarrowWide" class="h-3.5 w-3.5" />
-                {{ sort === 'desc' ? 'Newest first' : 'Oldest first' }}
+                {{ sort === 'desc' ? 'Expiring later first' : 'Expiring soon first' }}
             </button>
         </div>
 

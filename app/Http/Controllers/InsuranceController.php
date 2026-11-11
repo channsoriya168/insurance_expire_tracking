@@ -31,7 +31,7 @@ final class InsuranceController extends Controller
     {
         $search = $request->string('search')->trim()->value() ?: null;
         $expiry = $request->string('expiry')->trim()->value() ?: null;
-        $sort = $request->string('sort')->trim()->value() === 'asc' ? 'asc' : 'desc';
+        $sort = $request->string('sort')->trim()->value() === 'desc' ? 'desc' : 'asc';
 
         $filters = array_filter(['search' => $search, 'expiry' => $expiry]);
 
@@ -59,7 +59,7 @@ final class InsuranceController extends Controller
                     };
                 }),
             )
-            ->orderBy('created_at', $sort)
+            ->orderBy('expiry_date', $sort)
             ->paginate(15)
             ->withQueryString();
 
