@@ -38,7 +38,7 @@ class StoreInsuranceRequest extends FormRequest
             'contact_method' => ['required', Rule::in(PolicyFieldSteps::contactMethods())],
             'contact_value' => ['required', 'string', 'max:255'],
             'contact_person' => ['required', 'string', 'max:255'],
-            'insured_name' => ['required', 'string', 'max:255'],
+            'insured_name' => ['required', 'string'],
             'expiry_date' => ['required', 'date'],
             'policy_type_id' => ['required', 'integer', Rule::exists('policy_types', 'id')],
             'sum_insured' => ['required', 'numeric', 'min:0'],

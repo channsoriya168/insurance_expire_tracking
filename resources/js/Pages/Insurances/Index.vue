@@ -2,7 +2,7 @@
 import { Link, router } from '@inertiajs/vue3';
 import { watchDebounced } from '@vueuse/core';
 import { ref } from 'vue';
-import { ArrowDownNarrowWide, ArrowUpNarrowWide, Plus, Search, X } from '@lucide/vue';
+import { ArrowDownNarrowWide, ArrowUpNarrowWide, Plus, Search, Upload, X } from '@lucide/vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Icon from '@/Components/Icon.vue';
 import ExpiryTabs from '@/Components/ExpiryTabs.vue';
@@ -49,6 +49,30 @@ function clearSearch() {
 }
 
 watchDebounced(search, applyFilters, { debounce: 300 });
+
+const importInput = ref(null);
+const importing = ref(false);
+
+function handleImportFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+
+    if (!file) {
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    importing.value = true;
+
+    router.post('/insurances-import', formData, {
+        forceFormData: true,
+        onFinish: () => {
+            importing.value = false;
+        },
+    });
+}
 
 function destroy(insurance) {
     if (!confirm(`Delete policy ${insurance.policy_no}? This action cannot be undone.`)) {
@@ -107,6 +131,19 @@ function updatePaymentStatus(insurance, paymentStatus) {
                     @click="showSearch = !showSearch"
                 >
                     <Search class="h-4.5 w-4.5" />
+                </button>
+
+                <input ref="importInput" type="file" accept=".xlsx,.xls" class="hidden" @change="handleImportFile" />
+
+                <button
+                    type="button"
+                    aria-label="Import policies"
+                    class="flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-slate-200 bg-white pl-3.5 pr-4 text-slate-600 shadow-sm transition-transform active:scale-95 disabled:opacity-60"
+                    :disabled="importing"
+                    @click="importInput?.click()"
+                >
+                    <Upload class="h-4.5 w-4.5" />
+                    <span class="text-sm font-medium">{{ importing ? 'Importing…' : 'Import' }}</span>
                 </button>
 
                 <Link

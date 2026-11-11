@@ -3,6 +3,7 @@
 use App\Http\Controllers\InsuranceCompanyController;
 use App\Http\Controllers\InsuranceController;
 use App\Http\Controllers\InsuranceFormController;
+use App\Http\Controllers\InsuranceImportController;
 use App\Http\Controllers\InsuranceNotificationController;
 use App\Http\Controllers\PolicyTypeController;
 use App\Http\Controllers\SettingsController;
@@ -23,6 +24,7 @@ Route::middleware('telegram.chat')->group(function () {
     Route::patch('insurances-notifications/read', [InsuranceNotificationController::class, 'markManyRead'])->name('insurances.notifications.read.many');
     Route::patch('insurances-notifications/{insurance}/read', [InsuranceNotificationController::class, 'toggleRead'])->name('insurances.notifications.read');
     Route::resource('insurances', InsuranceController::class);
+    Route::post('insurances-import', InsuranceImportController::class)->name('insurances.import');
     Route::get('insurances/{insurance}/duplicate', [InsuranceController::class, 'duplicate'])->name('insurances.duplicate');
     Route::patch('insurances/{insurance}/payment-status', [InsuranceController::class, 'updatePaymentStatus'])->name('insurances.payment-status.update');
 
